@@ -2,11 +2,13 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Verbonden Verleden – Tijdslider</title>
+<title>Verbonden Verleden – Leaflet</title>
 
-<script src="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.js"></script>
-<link href="https://api.mapbox.com/mapbox-gl-js/v2.15.0/mapbox-gl.css" rel="stylesheet"/>
+<!-- Leaflet -->
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
+<!-- D3 -->
 <script src="https://d3js.org/d3.v7.min.js"></script>
 
 <style>
@@ -14,18 +16,19 @@ body { margin:0; display:flex; font-family:Arial; }
 #map { width:60%; height:100vh; }
 #network { width:40%; height:100vh; background:#111; }
 
-#controls {
+.node { fill:white; cursor:pointer; }
+.node.active { fill:red; }
+.link { stroke:#888; }
+.link.active { stroke:red; stroke-width:2; }
+
+#info {
   position:absolute;
-  bottom:20px;
+  top:20px;
   left:20px;
   background:white;
   padding:10px;
   border-radius:8px;
 }
-
-.node { fill:white; }
-.link { stroke:#888; }
-text { fill:white; font-size:12px; }
 </style>
 </head>
 
@@ -33,180 +36,133 @@ text { fill:white; font-size:12px; }
 
 <div id="map"></div>
 <svg id="network"></svg>
-
-<div id="controls">
-  <input type="range" min="0" max="4" value="0" id="slider">
-  <button onclick="play()">▶ Play</button>
-  <div id="date"></div>
-</div>
+<div id="info">Klik op een persoon</div>
 
 <script>
 
-// 🔑 Mapbox token
-mapboxgl.accessToken = 'YOUR_MAPBOX_TOKEN';
+// 🌍 Leaflet kaart
+const map = L.map('map').setView([52,10], 5);
 
-const map = new mapboxgl.Map({
-  container: 'map',
-  style: 'mapbox://styles/mapbox/dark-v11',
-  center: [10,52],
-  zoom: 4
-});
+// OpenStreetMap tiles
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
+  .addTo(map);
 
-// 🕰️ Tijdstappen
-const timeline = [
-  {date:"4 aug 1944", place:"Amsterdam", coords:[4.9,52.37]},
-  {date:"8 aug 1944", place:"Westerbork", coords:[6.61,52.92]},
-  {date:"3 sep 1944", place:"Transport", coords:[10,51]},
-  {date:"6 sep 1944", place:"Auschwitz", coords:[19.2,50.03]},
-  {date:"okt 1944", place:"Bergen-Belsen", coords:[9.9,52.76]}
-];
+// 📍 Locaties per persoon
+const personLocations = {
+  "Anne Frank": [[52.37,4.9],[52.92,6.61],[50.03,19.2],[52.76,9.9]],
+  "Margot Frank": [[50.03,19.2],[52.76,9.9]],
+  "Edith Frank": [[50.03,19.2]],
+  "Otto Frank": [[50.03,19.2]],
+  "Rosa de Winter": [[52.14,6.2]]
+};
 
 let markers = [];
+let routeLine = null;
 
-function updateMap(step){
-  // oude markers weg
-  markers.forEach(m => m.remove());
+// 🎯 Toon route
+function showRoute(person){
+
+  // markers verwijderen
+  markers.forEach(m => map.removeLayer(m));
   markers = [];
 
-  const coords = [];
+  // lijn verwijderen
+  if(routeLine){
+    map.removeLayer(routeLine);
+  }
 
-  for(let i=0;i<=step;i++){
-    const t = timeline[i];
+  const coords = personLocations[person] || [];
 
-    const marker = new mapboxgl.Marker()
-      .setLngLat(t.coords)
-      .setPopup(new mapboxgl.Popup().setText(t.place))
-      .addTo(map);
+  const latlngs = coords.map(c => [c[0], c[1]]);
 
+  coords.forEach(c => {
+    const marker = L.marker([c[0],c[1]]).addTo(map);
     markers.push(marker);
-    coords.push(t.coords);
+  });
+
+  if(latlngs.length){
+    routeLine = L.polyline(latlngs).addTo(map);
+    map.fitBounds(routeLine.getBounds());
   }
-
-  // route updaten
-  if(map.getSource('route')){
-    map.getSource('route').setData({
-      type:'Feature',
-      geometry:{
-        type:'LineString',
-        coordinates: coords
-      }
-    });
-  } else {
-    map.addSource('route',{
-      type:'geojson',
-      data:{
-        type:'Feature',
-        geometry:{
-          type:'LineString',
-          coordinates: coords
-        }
-      }
-    });
-
-    map.addLayer({
-      id:'route',
-      type:'line',
-      source:'route',
-      paint:{ 'line-width':4 }
-    });
-  }
-
-  document.getElementById("date").innerText = timeline[step].date;
 }
 
-// slider
-document.getElementById("slider").addEventListener("input", (e)=>{
-  updateMap(e.target.value);
-  updateNetwork(e.target.value);
-});
-
-// ▶ autoplay
-function play(){
-  let i = 0;
-  const interval = setInterval(()=>{
-    if(i>4){ clearInterval(interval); return; }
-    document.getElementById("slider").value = i;
-    updateMap(i);
-    updateNetwork(i);
-    i++;
-  },1500);
-}
-
-// 🕸️ NETWERK
-const allNodes = [
-  {id:"Anne Frank", step:0},
-  {id:"Margot Frank", step:0},
-  {id:"Edith Frank", step:0},
-  {id:"Otto Frank", step:0},
-  {id:"Rosa de Winter", step:4}
+// 🕸️ Netwerk (D3)
+const nodes = [
+  {id:"Anne Frank"},
+  {id:"Margot Frank"},
+  {id:"Edith Frank"},
+  {id:"Otto Frank"},
+  {id:"Rosa de Winter"}
 ];
 
-const allLinks = [
-  {source:"Anne Frank", target:"Margot Frank", step:0},
-  {source:"Anne Frank", target:"Edith Frank", step:0},
-  {source:"Anne Frank", target:"Otto Frank", step:0},
-  {source:"Rosa de Winter", target:"Otto Frank", step:4}
+const links = [
+  {source:"Anne Frank", target:"Margot Frank"},
+  {source:"Anne Frank", target:"Edith Frank"},
+  {source:"Anne Frank", target:"Otto Frank"},
+  {source:"Rosa de Winter", target:"Otto Frank"}
 ];
 
 const svg = d3.select("#network")
   .attr("width","100%")
   .attr("height","100%");
 
-let simulation;
+const simulation = d3.forceSimulation(nodes)
+  .force("link", d3.forceLink(links).id(d=>d.id).distance(120))
+  .force("charge", d3.forceManyBody().strength(-250))
+  .force("center", d3.forceCenter(window.innerWidth*0.2, window.innerHeight/2));
 
-function updateNetwork(step){
+const link = svg.append("g")
+  .selectAll("line")
+  .data(links)
+  .enter().append("line")
+  .attr("class","link");
 
-  svg.selectAll("*").remove();
+const node = svg.append("g")
+  .selectAll("circle")
+  .data(nodes)
+  .enter().append("circle")
+  .attr("r",10)
+  .attr("class","node")
+  .on("click",(event,d)=> focusPerson(d.id));
 
-  const nodes = allNodes.filter(n => n.step <= step);
-  const links = allLinks.filter(l => l.step <= step);
+const label = svg.append("g")
+  .selectAll("text")
+  .data(nodes)
+  .enter().append("text")
+  .text(d=>d.id);
 
-  simulation = d3.forceSimulation(nodes)
-    .force("link", d3.forceLink(links).id(d=>d.id).distance(100))
-    .force("charge", d3.forceManyBody().strength(-200))
-    .force("center", d3.forceCenter(window.innerWidth*0.2, window.innerHeight/2));
+simulation.on("tick", ()=>{
+  link
+    .attr("x1", d=>d.source.x)
+    .attr("y1", d=>d.source.y)
+    .attr("x2", d=>d.target.x)
+    .attr("y2", d=>d.target.y);
 
-  const link = svg.append("g")
-    .selectAll("line")
-    .data(links)
-    .enter().append("line")
-    .attr("class","link");
+  node
+    .attr("cx", d=>d.x)
+    .attr("cy", d=>d.y);
 
-  const node = svg.append("g")
-    .selectAll("circle")
-    .data(nodes)
-    .enter().append("circle")
-    .attr("r",8)
-    .attr("class","node");
-
-  const label = svg.append("g")
-    .selectAll("text")
-    .data(nodes)
-    .enter().append("text")
-    .text(d=>d.id);
-
-  simulation.on("tick", ()=>{
-    link
-      .attr("x1", d=>d.source.x)
-      .attr("y1", d=>d.source.y)
-      .attr("x2", d=>d.target.x)
-      .attr("y2", d=>d.target.y);
-
-    node
-      .attr("cx", d=>d.x)
-      .attr("cy", d=>d.y);
-
-    label
-      .attr("x", d=>d.x+10)
-      .attr("y", d=>d.y);
-  });
-}
-
-// init
-map.on('load', ()=>{
-  updateMap(0);
-  updateNetwork(0);
+  label
+    .attr("x", d=>d.x+12)
+    .attr("y", d=>d.y);
 });
+
+// 🎯 Focus
+function focusPerson(name){
+
+  // highlight nodes
+  node.classed("active", d => d.id === name);
+
+  // highlight links
+  link.classed("active", d =>
+    d.source.id === name || d.target.id === name
+  );
+
+  document.getElementById("info").innerHTML =
+    "<b>"+name+"</b><br>Relaties + route zichtbaar";
+
+  showRoute(name);
+}
 
 </script>
 
