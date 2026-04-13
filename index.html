@@ -2,32 +2,23 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Verbonden Verleden – Leaflet</title>
+<title>Verbonden Verleden – Demo</title>
 
-<!-- Leaflet -->
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
-<!-- D3 -->
-<script src="https://d3js.org/d3.v7.min.js"></script>
-
 <style>
-body { margin:0; display:flex; font-family:Arial; }
-#map { width:60%; height:100vh; }
-#network { width:40%; height:100vh; background:#111; }
+body { margin:0; font-family:Arial; }
+#map { height:100vh; }
 
-.node { fill:white; cursor:pointer; }
-.node.active { fill:red; }
-.link { stroke:#888; }
-.link.active { stroke:red; stroke-width:2; }
-
-#info {
+#controls {
   position:absolute;
-  top:20px;
-  left:20px;
+  top:10px;
+  left:10px;
   background:white;
   padding:10px;
   border-radius:8px;
+  z-index:1000;
 }
 </style>
 </head>
@@ -35,134 +26,167 @@ body { margin:0; display:flex; font-family:Arial; }
 <body>
 
 <div id="map"></div>
-<svg id="network"></svg>
-<div id="info">Klik op een persoon</div>
+
+<div id="controls">
+  <b>Tijd</b><br>
+  <input type="range" min="0" max="8" value="0" id="slider"><br><br>
+
+  <b>Filters</b><br>
+  <button onclick="setFilter('all')">Alles</button>
+  <button onclick="setFilter('survivors')">Overleefd</button>
+  <button onclick="setFilter('victims')">Overleden</button>
+  <button onclick="setFilter('deportation')">Deportatie</button>
+  <button onclick="setFilter('repatriation')">Repatriëring</button>
+</div>
 
 <script>
 
-// 🌍 Leaflet kaart
-const map = L.map('map').setView([52,10], 5);
+// 🌍 Kaart
+const map = L.map('map').setView([50,10], 4);
 
-// OpenStreetMap tiles
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-  .addTo(map);
+.addTo(map);
 
-// 📍 Locaties per persoon
-const personLocations = {
-  "Anne Frank": [[52.37,4.9],[52.92,6.61],[50.03,19.2],[52.76,9.9]],
-  "Margot Frank": [[50.03,19.2],[52.76,9.9]],
-  "Edith Frank": [[50.03,19.2]],
-  "Otto Frank": [[50.03,19.2]],
-  "Rosa de Winter": [[52.14,6.2]]
+// 🎨 Kleuren
+const colors = {
+  "Anne Frank": "red",
+  "Margot Frank": "orange",
+  "Edith Frank": "pink",
+  "Otto Frank": "green",
+  "Rosa de Winter": "blue",
+  "Judik de Winter": "purple"
 };
 
+// 👥 Overleving
+const survivors = ["Otto Frank","Rosa de Winter","Judik de Winter"];
+const victims = ["Anne Frank","Margot Frank","Edith Frank"];
+
+// 🕰️ Tijdlijnen
+const timelines = {
+
+"Anne Frank": [
+{year:1944, coords:[52.37,4.9]},
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]},
+{year:1944.9, coords:[52.76,9.9]}
+],
+
+"Margot Frank": [
+{year:1944, coords:[52.37,4.9]},
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]},
+{year:1944.9, coords:[52.76,9.9]}
+],
+
+"Edith Frank": [
+{year:1944, coords:[52.37,4.9]},
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]}
+],
+
+"Otto Frank": [
+{year:1944, coords:[52.37,4.9]},
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]},
+{year:1945.3, coords:[46.48,30.73]},
+{year:1945.41, coords:[43.30,5.37]},
+{year:1945.6, coords:[52.37,4.9]}
+],
+
+"Rosa de Winter": [
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]},
+{year:1945.3, coords:[46.48,30.73]},
+{year:1945.41, coords:[43.30,5.37]},
+{year:1945.6, coords:[52.14,6.2]}
+],
+
+"Judik de Winter": [
+{year:1944.2, coords:[52.92,6.61]},
+{year:1944.7, coords:[50.03,19.2]},
+{year:1945.6, coords:[52.14,6.2]}
+]
+
+};
+
+// 🎛️ state
+let currentFilter = "all";
+let lines = [];
 let markers = [];
-let routeLine = null;
 
-// 🎯 Toon route
-function showRoute(person){
+// 🔄 Filter instellen
+function setFilter(f){
+  currentFilter = f;
+  update(parseInt(document.getElementById("slider").value));
+}
 
-  // markers verwijderen
+// 🗺️ Update kaart
+function update(step){
+
+  lines.forEach(l => map.removeLayer(l));
   markers.forEach(m => map.removeLayer(m));
+
+  lines = [];
   markers = [];
 
-  // lijn verwijderen
-  if(routeLine){
-    map.removeLayer(routeLine);
-  }
+  Object.keys(timelines).forEach(person => {
 
-  const coords = personLocations[person] || [];
+    if(currentFilter === "survivors" && !survivors.includes(person)) return;
+    if(currentFilter === "victims" && !victims.includes(person)) return;
 
-  const latlngs = coords.map(c => [c[0], c[1]]);
+    const data = timelines[person];
+    const coords = [];
 
-  coords.forEach(c => {
-    const marker = L.marker([c[0],c[1]]).addTo(map);
-    markers.push(marker);
+    for(let i=0;i<=step && i<data.length;i++){
+      coords.push(data[i].coords);
+
+      const m = L.circleMarker(data[i].coords,{
+        radius:6,
+        color:colors[person]
+      }).addTo(map);
+
+      markers.push(m);
+    }
+
+    if(coords.length > 1){
+      const line = L.polyline(coords,{
+        color:colors[person],
+        weight:3
+      }).addTo(map);
+
+      lines.push(line);
+    }
+
   });
 
-  if(latlngs.length){
-    routeLine = L.polyline(latlngs).addTo(map);
-    map.fitBounds(routeLine.getBounds());
+  // 🚂 Deportatie
+  if(currentFilter === "all" || currentFilter === "deportation"){
+    L.polyline([[52.92,6.61],[50.03,19.2]],{
+      color:"yellow",
+      weight:6,
+      opacity:0.5
+    }).addTo(map);
   }
+
+  // 🚢 Repatriëring
+  if(currentFilter === "all" || currentFilter === "repatriation"){
+    L.polyline([[46.48,30.73],[43.30,5.37]],{
+      color:"cyan",
+      weight:6,
+      dashArray:"5,10"
+    }).addTo(map);
+  }
+
 }
 
-// 🕸️ Netwerk (D3)
-const nodes = [
-  {id:"Anne Frank"},
-  {id:"Margot Frank"},
-  {id:"Edith Frank"},
-  {id:"Otto Frank"},
-  {id:"Rosa de Winter"}
-];
-
-const links = [
-  {source:"Anne Frank", target:"Margot Frank"},
-  {source:"Anne Frank", target:"Edith Frank"},
-  {source:"Anne Frank", target:"Otto Frank"},
-  {source:"Rosa de Winter", target:"Otto Frank"}
-];
-
-const svg = d3.select("#network")
-  .attr("width","100%")
-  .attr("height","100%");
-
-const simulation = d3.forceSimulation(nodes)
-  .force("link", d3.forceLink(links).id(d=>d.id).distance(120))
-  .force("charge", d3.forceManyBody().strength(-250))
-  .force("center", d3.forceCenter(window.innerWidth*0.2, window.innerHeight/2));
-
-const link = svg.append("g")
-  .selectAll("line")
-  .data(links)
-  .enter().append("line")
-  .attr("class","link");
-
-const node = svg.append("g")
-  .selectAll("circle")
-  .data(nodes)
-  .enter().append("circle")
-  .attr("r",10)
-  .attr("class","node")
-  .on("click",(event,d)=> focusPerson(d.id));
-
-const label = svg.append("g")
-  .selectAll("text")
-  .data(nodes)
-  .enter().append("text")
-  .text(d=>d.id);
-
-simulation.on("tick", ()=>{
-  link
-    .attr("x1", d=>d.source.x)
-    .attr("y1", d=>d.source.y)
-    .attr("x2", d=>d.target.x)
-    .attr("y2", d=>d.target.y);
-
-  node
-    .attr("cx", d=>d.x)
-    .attr("cy", d=>d.y);
-
-  label
-    .attr("x", d=>d.x+12)
-    .attr("y", d=>d.y);
+// 🎚️ Slider
+document.getElementById("slider")
+.addEventListener("input",(e)=>{
+  update(parseInt(e.target.value));
 });
 
-// 🎯 Focus
-function focusPerson(name){
-
-  // highlight nodes
-  node.classed("active", d => d.id === name);
-
-  // highlight links
-  link.classed("active", d =>
-    d.source.id === name || d.target.id === name
-  );
-
-  document.getElementById("info").innerHTML =
-    "<b>"+name+"</b><br>Relaties + route zichtbaar";
-
-  showRoute(name);
-}
+// init
+update(0);
 
 </script>
 
