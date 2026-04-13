@@ -2,7 +2,7 @@
 <html lang="nl">
 <head>
 <meta charset="UTF-8">
-<title>Verbonden Verleden – Demo</title>
+<title>Verbonden Verleden</title>
 
 <link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css"/>
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
@@ -20,6 +20,24 @@ body { margin:0; font-family:Arial; }
   border-radius:8px;
   z-index:1000;
 }
+
+#infoPanel {
+  position:absolute;
+  right:10px;
+  top:10px;
+  width:320px;
+  background:white;
+  padding:15px;
+  border-radius:8px;
+  z-index:1000;
+  max-height:90vh;
+  overflow:auto;
+}
+
+button.active {
+  background:black;
+  color:white;
+}
 </style>
 </head>
 
@@ -28,165 +46,190 @@ body { margin:0; font-family:Arial; }
 <div id="map"></div>
 
 <div id="controls">
-  <b>Tijd</b><br>
-  <input type="range" min="0" max="8" value="0" id="slider"><br><br>
+<b>Tijd</b><br>
+<input type="range" min="0" max="10" value="0" id="slider"><br><br>
 
-  <b>Filters</b><br>
-  <button onclick="setFilter('all')">Alles</button>
-  <button onclick="setFilter('survivors')">Overleefd</button>
-  <button onclick="setFilter('victims')">Overleden</button>
-  <button onclick="setFilter('deportation')">Deportatie</button>
-  <button onclick="setFilter('repatriation')">Repatriëring</button>
+<b>Filters</b><br>
+<button onclick="setFilter('all')">Alles</button>
+<button onclick="setFilter('survivors')">Overleefd</button>
+<button onclick="setFilter('victims')">Overleden</button><br><br>
+
+<b>Personen</b><br>
+<button onclick="togglePerson('Anne Frank')">Anne</button>
+<button onclick="togglePerson('Margot Frank')">Margot</button>
+<button onclick="togglePerson('Edith Frank')">Edith</button>
+<button onclick="togglePerson('Otto Frank')">Otto</button>
+<button onclick="togglePerson('Rosa de Winter')">Rosa</button>
+<button onclick="togglePerson('Judik de Winter')">Judik</button><br><br>
+
+<button onclick="resetPersons()">Reset</button>
 </div>
+
+<div id="infoPanel">Klik op een persoon of locatie</div>
 
 <script>
 
-// 🌍 Kaart
+// kaart
 const map = L.map('map').setView([50,10], 4);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-.addTo(map);
-
-// 🎨 Kleuren
+// kleuren
 const colors = {
-  "Anne Frank": "red",
-  "Margot Frank": "orange",
-  "Edith Frank": "pink",
-  "Otto Frank": "green",
-  "Rosa de Winter": "blue",
-  "Judik de Winter": "purple"
+  "Anne Frank":"red",
+  "Margot Frank":"orange",
+  "Edith Frank":"pink",
+  "Otto Frank":"green",
+  "Rosa de Winter":"blue",
+  "Judik de Winter":"purple"
 };
 
-// 👥 Overleving
+// groepen
 const survivors = ["Otto Frank","Rosa de Winter","Judik de Winter"];
 const victims = ["Anne Frank","Margot Frank","Edith Frank"];
 
-// 🕰️ Tijdlijnen
+let activePersons = new Set(Object.keys(colors));
+let focusPerson = null;
+let currentFilter = "all";
+
+// timelines
 const timelines = {
-
-"Anne Frank": [
-{year:1944, coords:[52.37,4.9]},
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]},
-{year:1944.9, coords:[52.76,9.9]}
-],
-
-"Margot Frank": [
-{year:1944, coords:[52.37,4.9]},
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]},
-{year:1944.9, coords:[52.76,9.9]}
-],
-
-"Edith Frank": [
-{year:1944, coords:[52.37,4.9]},
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]}
-],
-
-"Otto Frank": [
-{year:1944, coords:[52.37,4.9]},
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]},
-{year:1945.3, coords:[46.48,30.73]},
-{year:1945.41, coords:[43.30,5.37]},
-{year:1945.6, coords:[52.37,4.9]}
-],
-
-"Rosa de Winter": [
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]},
-{year:1945.3, coords:[46.48,30.73]},
-{year:1945.41, coords:[43.30,5.37]},
-{year:1945.6, coords:[52.14,6.2]}
-],
-
-"Judik de Winter": [
-{year:1944.2, coords:[52.92,6.61]},
-{year:1944.7, coords:[50.03,19.2]},
-{year:1945.6, coords:[52.14,6.2]}
-]
-
+"Anne Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2],[52.76,9.9]],
+"Margot Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2],[52.76,9.9]],
+"Edith Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]],
+"Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2],[46.48,30.73],[43.30,5.37],[52.37,4.9]],
+"Rosa de Winter":[[52.92,6.61],[50.03,19.2],[46.48,30.73],[43.30,5.37],[52.14,6.2]],
+"Judik de Winter":[[52.92,6.61],[50.03,19.2],[52.14,6.2]]
 };
 
-// 🎛️ state
-let currentFilter = "all";
-let lines = [];
-let markers = [];
+// deportatieroute
+const deportationRoute = [
+[52.92,6.61],
+[52.93,6.57],
+[52.99,6.56],
+[52.37,9.72],
+[52.52,13.40],
+[51.11,17.03],
+[50.03,19.2]
+];
 
-// 🔄 Filter instellen
-function setFilter(f){
-  currentFilter = f;
-  update(parseInt(document.getElementById("slider").value));
+// info panel data
+const infoData = {
+"Anne Frank":"<h3>Anne Frank</h3><img src='https://upload.wikimedia.org/wikipedia/commons/7/75/Anne_Frank_1941.jpg' width='100%'>Bekend van haar dagboek.",
+"Otto Frank":"<h3>Otto Frank</h3><img src='https://upload.wikimedia.org/wikipedia/commons/3/3c/Otto_Frank_1961.jpg' width='100%'>Overleefde Auschwitz en keerde terug via Marseille.",
+"Rosa de Winter":"<h3>Rosa de Winter</h3>Overleefde Auschwitz en informeerde Otto Frank.",
+"westerbork":"<h3>Westerbork strafbarak</h3>Hier ontmoetten Frank en De Winter families."
+};
+
+function showInfo(key){
+document.getElementById("infoPanel").innerHTML = infoData[key] || key;
 }
 
-// 🗺️ Update kaart
-function update(step){
+// update kaart
+let layers = [];
 
-  lines.forEach(l => map.removeLayer(l));
-  markers.forEach(m => map.removeLayer(m));
+function update(){
 
-  lines = [];
-  markers = [];
+layers.forEach(l=>map.removeLayer(l));
+layers=[];
 
-  Object.keys(timelines).forEach(person => {
+Object.keys(timelines).forEach(person=>{
 
-    if(currentFilter === "survivors" && !survivors.includes(person)) return;
-    if(currentFilter === "victims" && !victims.includes(person)) return;
+if(!activePersons.has(person)) return;
+if(currentFilter==="survivors" && !survivors.includes(person)) return;
+if(currentFilter==="victims" && !victims.includes(person)) return;
 
-    const data = timelines[person];
-    const coords = [];
+const coords = timelines[person];
 
-    for(let i=0;i<=step && i<data.length;i++){
-      coords.push(data[i].coords);
+const line = L.polyline(coords,{
+color:colors[person],
+weight: person===focusPerson?5:3,
+opacity: focusPerson && person!==focusPerson ?0.2:1
+})
+.on("click",()=>showInfo(person))
+.addTo(map);
 
-      const m = L.circleMarker(data[i].coords,{
-        radius:6,
-        color:colors[person]
-      }).addTo(map);
+layers.push(line);
 
-      markers.push(m);
-    }
+});
 
-    if(coords.length > 1){
-      const line = L.polyline(coords,{
-        color:colors[person],
-        weight:3
-      }).addTo(map);
+// deportatie lijn
+layers.push(
+L.polyline(deportationRoute,{
+color:"yellow",
+weight:5
+}).addTo(map)
+);
 
-      lines.push(line);
-    }
+// repatriëring
+layers.push(
+L.polyline([[46.48,30.73],[43.30,5.37]],{
+color:"cyan",
+dashArray:"5,10"
+}).addTo(map)
+);
 
-  });
-
-  // 🚂 Deportatie
-  if(currentFilter === "all" || currentFilter === "deportation"){
-    L.polyline([[52.92,6.61],[50.03,19.2]],{
-      color:"yellow",
-      weight:6,
-      opacity:0.5
-    }).addTo(map);
-  }
-
-  // 🚢 Repatriëring
-  if(currentFilter === "all" || currentFilter === "repatriation"){
-    L.polyline([[46.48,30.73],[43.30,5.37]],{
-      color:"cyan",
-      weight:6,
-      dashArray:"5,10"
-    }).addTo(map);
-  }
+// Westerbork event
+layers.push(
+L.circleMarker([52.92,6.61],{
+radius:10,color:"black",fillColor:"yellow",fillOpacity:1
+})
+.on("click",()=>showInfo("westerbork"))
+.addTo(map)
+);
 
 }
 
-// 🎚️ Slider
+// filters
+function setFilter(f){ currentFilter=f; update(); }
+
+function togglePerson(name){
+if(activePersons.has(name)){activePersons.delete(name);}
+else{activePersons.add(name); focusPerson=name;}
+update();
+}
+
+function resetPersons(){
+activePersons=new Set(Object.keys(colors));
+focusPerson=null;
+update();
+}
+
+// 🚂 trein gekoppeld aan slider
+let trainMarker = L.circleMarker(deportationRoute[0],{
+radius:8,color:"black",fillColor:"yellow",fillOpacity:1
+}).addTo(map);
+
+function interpolate(a,b,t){
+return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+}
+
+function updateTrain(value){
+const max=document.getElementById("slider").max;
+const progress=value/max;
+const total=deportationRoute.length-1;
+
+const seg=Math.floor(progress*total);
+const t=(progress*total)-seg;
+
+if(seg>=total){
+trainMarker.setLatLng(deportationRoute[total]);
+return;
+}
+
+const pos=interpolate(deportationRoute[seg],deportationRoute[seg+1],t);
+trainMarker.setLatLng(pos);
+}
+
+// slider
 document.getElementById("slider")
 .addEventListener("input",(e)=>{
-  update(parseInt(e.target.value));
+const v=parseInt(e.target.value);
+update();
+updateTrain(v);
 });
 
 // init
-update(0);
+update();
 
 </script>
 
