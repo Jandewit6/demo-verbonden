@@ -10,7 +10,7 @@
 <style>
 #map { height: 100vh; }
 
-/* FILTERS (rechtsboven) */
+/* UI rechtsboven */
 #controls {
     position: absolute;
     top: 10px;
@@ -18,14 +18,15 @@
     background: white;
     padding: 10px;
     z-index: 1000;
-    max-width: 220px;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    max-width: 240px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
 }
 
 .person {
     display: flex;
     align-items: center;
     margin-bottom: 6px;
+    cursor: pointer;
 }
 
 .person img {
@@ -35,7 +36,7 @@
     margin-right: 6px;
 }
 
-/* LEGENDA (rechtsonder) */
+/* Legenda rechtsonder */
 #legend {
     position: absolute;
     bottom: 20px;
@@ -43,7 +44,7 @@
     background: white;
     padding: 10px;
     z-index: 1000;
-    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
     font-size: 13px;
 }
 
@@ -66,46 +67,38 @@
 <!-- FILTERS -->
 <div id="controls">
 
-<div class="person">
+<div class="person" data-person="anne">
 <input type="checkbox" id="anne" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">
-Anne
+<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">Anne
 </div>
 
-<div class="person">
+<div class="person" data-person="margot">
 <input type="checkbox" id="margot" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">
-Margot
+<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">Margot
 </div>
 
-<div class="person">
+<div class="person" data-person="otto">
 <input type="checkbox" id="otto" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">
-Otto
+<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">Otto
 </div>
 
-<div class="person">
+<div class="person" data-person="edith">
 <input type="checkbox" id="edith" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">
-Edith
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">Edith
 </div>
 
-<div class="person">
+<div class="person" data-person="rosa">
 <input type="checkbox" id="rosa" checked>
-<img src="images/rosa.jpg">
-Rosa
+<img src="images/rosa.jpg">Rosa
 </div>
 
-<div class="person">
+<div class="person" data-person="judy">
 <input type="checkbox" id="judy" checked>
-<img src="images/judy.jpg">
-Judy
+<img src="images/judy.jpg">Judy
 </div>
 
-<div id="sliderContainer">
 <b>Jaar: <span id="yearLabel">1942</span></b><br>
 <input type="range" id="yearSlider" min="1942" max="1945" value="1942">
-</div>
 
 </div>
 
@@ -113,35 +106,12 @@ Judy
 <div id="legend">
 <b>Legenda</b>
 
-<div class="legend-item">
-<div class="legend-line" style="background:red;"></div>
-Deportatie (Frank)
-</div>
-
-<div class="legend-item">
-<div class="legend-line" style="background:blue;"></div>
-Kampverplaatsing
-</div>
-
-<div class="legend-item">
-<div class="legend-line" style="background:green;"></div>
-Deportatie (De Winter)
-</div>
-
-<div class="legend-item">
-<div class="legend-line" style="background:orange;"></div>
-Dwangarbeid
-</div>
-
-<div class="legend-item">
-<div class="legend-line" style="background:black; border-top:2px dashed black;"></div>
-Repatriëring (zee)
-</div>
-
-<div class="legend-item">
-<div class="legend-line" style="background:purple;"></div>
-Repatriëring (land)
-</div>
+<div class="legend-item"><div class="legend-line" style="background:red"></div>Deportatie</div>
+<div class="legend-item"><div class="legend-line" style="background:blue"></div>Kampverplaatsing</div>
+<div class="legend-item"><div class="legend-line" style="background:green"></div>De Winter</div>
+<div class="legend-item"><div class="legend-line" style="background:orange"></div>Dwangarbeid</div>
+<div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee</div>
+<div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land</div>
 
 </div>
 
@@ -149,37 +119,27 @@ Repatriëring (land)
 
 <script>
 
-// ==========================
 // MAP
-// ==========================
-
 var map = L.map('map').setView([52.1,5.3],5);
+L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
-.addTo(map);
-
-// ==========================
 // LAYERS
-// ==========================
-
 var layers = {
-    anne: L.layerGroup().addTo(map),
-    margot: L.layerGroup().addTo(map),
-    otto: L.layerGroup().addTo(map),
-    edith: L.layerGroup().addTo(map),
-    rosa: L.layerGroup().addTo(map),
-    judy: L.layerGroup().addTo(map)
+anne:L.layerGroup().addTo(map),
+margot:L.layerGroup().addTo(map),
+otto:L.layerGroup().addTo(map),
+edith:L.layerGroup().addTo(map),
+rosa:L.layerGroup().addTo(map),
+judy:L.layerGroup().addTo(map)
 };
 
-// ==========================
-// DATA
-// ==========================
+var nodeLayer = L.layerGroup().addTo(map);
 
+// DATA ROUTES
 var data = [
 
 {year:1944, persons:["anne","margot","otto","edith"],
-coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],
-[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
 style:{color:'red'}},
 
 {year:1944, persons:["anne","margot"],
@@ -187,8 +147,7 @@ coords:[[50.03,19.17],[52.52,13.40],[53.55,9.99],[52.75,9.90]],
 style:{color:'blue'}},
 
 {year:1943, persons:["rosa","judy"],
-coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],
-[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
 style:{color:'green'}},
 
 {year:1944, persons:["judy"],
@@ -196,54 +155,98 @@ coords:[[50.03,19.17],[50.81,14.96]],
 style:{color:'orange',dashArray:'5,5'}},
 
 {year:1945, persons:["rosa","otto"],
-coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],
-[43,34],[38,28],[36,20],[43.29,5.36],
-[49.61,6.13],[51.19,5.98],[52.09,5.12]],
+coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],[43,34],[38,28],[36,20],[43.29,5.36],[49.61,6.13],[51.19,5.98],[52.09,5.12]],
 style:{color:'black',dashArray:'8,10'}},
 
 {year:1945, persons:["judy"],
-coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],
-[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
+coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
 style:{color:'purple'}}
 
 ];
 
-// ==========================
+// KNOOPPUNTEN
+var nodes = [
+{year:1942, coords:[52.37,4.89], text:"Amsterdam – Onderduik"},
+{year:1943, coords:[52.14,6.19], text:"Zutphen – Vertrek"},
+{year:1943, coords:[52.91,6.58], text:"Westerbork – Ontmoeting families"},
+{year:1944, coords:[50.03,19.17], text:"Auschwitz – Edith sterft, vriendschap"},
+{year:1944, coords:[52.75,9.90], text:"Bergen-Belsen – Anne & Margot overlijden"},
+{year:1945, coords:[51.19,5.98], text:"Roermond – Hereniging"}
+];
+
+// HOVER
+var hoverPerson = null;
+
 // RENDER
-// ==========================
-
 function render(year){
-    Object.values(layers).forEach(l => l.clearLayers());
 
-    data.forEach(function(route){
-        if(route.year <= year){
-            route.persons.forEach(function(p){
-                if(document.getElementById(p).checked){
-                    L.polyline(route.coords, route.style).addTo(layers[p]);
-                }
-            });
-        }
-    });
+Object.values(layers).forEach(l => l.clearLayers());
+nodeLayer.clearLayers();
+
+data.forEach(function(route){
+if(route.year <= year){
+route.persons.forEach(function(p){
+
+if(document.getElementById(p).checked){
+
+var style = Object.assign({}, route.style);
+
+if(hoverPerson){
+if(p === hoverPerson){
+style.weight = 6;
+} else {
+style.opacity = 0.2;
+}
 }
 
-// ==========================
+L.polyline(route.coords, style).addTo(layers[p]);
+
+}
+
+});
+}
+});
+
+nodes.forEach(function(n){
+if(n.year <= year){
+L.circleMarker(n.coords,{
+radius:6,
+color:'black',
+fillColor:'yellow',
+fillOpacity:0.9
+})
+.bindPopup(n.text)
+.addTo(nodeLayer);
+}
+});
+
+}
+
 // EVENTS
-// ==========================
-
-var slider = document.getElementById("yearSlider");
-var label = document.getElementById("yearLabel");
-
-slider.addEventListener("input", function(){
-    label.innerText = slider.value;
-    render(parseInt(slider.value));
+document.getElementById("yearSlider").addEventListener("input", function(){
+document.getElementById("yearLabel").innerText = this.value;
+render(parseInt(this.value));
 });
 
 ["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
-    document.getElementById(id).addEventListener("change", function(){
-        render(parseInt(slider.value));
-    });
+document.getElementById(id).addEventListener("change", function(){
+render(parseInt(document.getElementById("yearSlider").value));
+});
 });
 
+// HOVER EVENTS
+document.querySelectorAll(".person").forEach(function(el){
+el.addEventListener("mouseenter", function(){
+hoverPerson = el.dataset.person;
+render(parseInt(document.getElementById("yearSlider").value));
+});
+el.addEventListener("mouseleave", function(){
+hoverPerson = null;
+render(parseInt(document.getElementById("yearSlider").value));
+});
+});
+
+// INIT
 render(1942);
 
 </script>
