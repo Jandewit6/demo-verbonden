@@ -59,16 +59,6 @@
     height: 4px;
     margin-right: 6px;
 }
-
-/* labels */
-.smart-label {
-    background: rgba(255,255,255,0.9);
-    border: 1px solid #333;
-    border-radius: 4px;
-    padding: 2px 6px;
-    font-size: 11px;
-    font-weight: bold;
-}
 </style>
 </head>
 
@@ -82,8 +72,8 @@
 <div class="person" data-person="rosa"><input type="checkbox" id="rosa" checked><img src="images/rosa.jpg">Rosa</div>
 <div class="person" data-person="judy"><input type="checkbox" id="judy" checked><img src="images/judy.jpg">Judy</div>
 
-<b>Jaar: <span id="yearLabel">1942</span></b><br>
-<input type="range" id="yearSlider" min="1942" max="1945" value="1942">
+<b>Jaar: <span id="yearLabel">1945</span></b><br>
+<input type="range" id="yearSlider" min="1942" max="1945" value="1945">
 </div>
 
 <div id="legend">
@@ -106,11 +96,9 @@
 
 <script>
 
-// MAP
 var map = L.map('map').setView([52.1,5.3],5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// LAYERS
 var layers = {
 anne:L.layerGroup().addTo(map),
 margot:L.layerGroup().addTo(map),
@@ -122,7 +110,6 @@ judy:L.layerGroup().addTo(map)
 
 var nodeLayer = L.layerGroup().addTo(map);
 
-// ROUTES
 var data = [
 
 {year:1944, persons:["anne","margot","otto","edith"],
@@ -151,7 +138,6 @@ style:{color:'purple'}}
 
 ];
 
-// NODE STYLES
 function getNodeStyle(type){
 if(type==="start") return {color:"black", fillColor:"white"};
 if(type==="meeting") return {color:"black", fillColor:"yellow"};
@@ -166,14 +152,6 @@ if(type==="camp") return "Kamp / geweld";
 if(type==="transport") return "Transport";
 }
 
-function isNodeVisibleForPerson(node){
-if(hoverPerson){
-return node.focusPersons.includes(hoverPerson);
-}
-return node.focusPersons.some(p => document.getElementById(p).checked);
-}
-
-// NODES
 var nodes = [
 {year:1942,type:"start",coords:[52.37,4.89],title:"Amsterdam",short:"Onderduik",persons:["Frank familie"],focusPersons:["anne","margot","otto","edith"],desc:"Onderduik familie Frank"},
 {year:1943,type:"start",coords:[52.14,6.19],title:"Zutphen",short:"Arrestatie",persons:["Rosa","Judy"],focusPersons:["rosa","judy"],desc:"Vertrek De Winter"},
@@ -185,10 +163,8 @@ var nodes = [
 {year:1945,type:"meeting",coords:[51.19,5.98],title:"Roermond",short:"Hereniging",persons:["Rosa","Judy"],focusPersons:["rosa","judy"],desc:"Hereniging"}
 ];
 
-// HOVER
 var hoverPerson = null;
 
-// RENDER
 function render(year){
 
 Object.values(layers).forEach(l => l.clearLayers());
@@ -198,26 +174,16 @@ data.forEach(function(route){
 if(route.year <= year){
 route.persons.forEach(function(p){
 if(document.getElementById(p).checked){
-
-var style = Object.assign({}, route.style);
-
-if(hoverPerson){
-if(p===hoverPerson){style.weight=6;}
-else{style.opacity=0.2;}
-}
-
-L.polyline(route.coords, style).addTo(layers[p]);
+L.polyline(route.coords, route.style).addTo(layers[p]);
 }
 });
 }
 });
 
-// nodes
 nodes.forEach(function(n){
 if(n.year <= year){
 
 var style = getNodeStyle(n.type);
-
 var persons = n.persons.join(", ");
 
 var popupContent =
@@ -232,14 +198,11 @@ fillColor:style.fillColor,
 fillOpacity:0.9
 });
 
-// slimme labels
-if(isNodeVisibleForPerson(n)){
-marker.bindTooltip(n.title+" – "+n.short,{permanent:true,direction:"top",offset:[0,-10],className:"smart-label"});
-}
+// hover label
+marker.bindTooltip(n.title + " – " + n.short,{direction:"top",offset:[0,-10]});
 
 marker.addTo(nodeLayer);
 
-// klik met popup fix
 marker.on("click", function(){
 
 document.getElementById("yearSlider").value = n.year;
@@ -270,7 +233,6 @@ L.popup()
 
 }
 
-// EVENTS
 document.getElementById("yearSlider").addEventListener("input", function(){
 document.getElementById("yearLabel").innerText = this.value;
 render(parseInt(this.value));
@@ -282,19 +244,7 @@ render(parseInt(document.getElementById("yearSlider").value));
 });
 });
 
-document.querySelectorAll(".person").forEach(function(el){
-el.addEventListener("mouseenter", function(){
-hoverPerson = el.dataset.person;
-render(parseInt(document.getElementById("yearSlider").value));
-});
-el.addEventListener("mouseleave", function(){
-hoverPerson = null;
-render(parseInt(document.getElementById("yearSlider").value));
-});
-});
-
-// INIT
-render(1942);
+render(1945);
 
 </script>
 
