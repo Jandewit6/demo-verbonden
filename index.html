@@ -10,14 +10,16 @@
 <style>
 #map { height: 100vh; }
 
+/* FILTERS (rechtsboven) */
 #controls {
     position: absolute;
     top: 10px;
-    left: 10px;
+    right: 10px;
     background: white;
     padding: 10px;
     z-index: 1000;
     max-width: 220px;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
 }
 
 .person {
@@ -33,37 +35,112 @@
     margin-right: 6px;
 }
 
-#sliderContainer {
-    margin-top: 10px;
+/* LEGENDA (rechtsonder) */
+#legend {
+    position: absolute;
+    bottom: 20px;
+    right: 10px;
+    background: white;
+    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 0 10px rgba(0,0,0,0.2);
+    font-size: 13px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.legend-line {
+    width: 30px;
+    height: 4px;
+    margin-right: 6px;
 }
 </style>
 </head>
 
 <body>
 
+<!-- FILTERS -->
 <div id="controls">
 
-<div class="person"><input type="checkbox" id="anne" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">Anne</div>
+<div class="person">
+<input type="checkbox" id="anne" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">
+Anne
+</div>
 
-<div class="person"><input type="checkbox" id="margot" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">Margot</div>
+<div class="person">
+<input type="checkbox" id="margot" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">
+Margot
+</div>
 
-<div class="person"><input type="checkbox" id="otto" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">Otto</div>
+<div class="person">
+<input type="checkbox" id="otto" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">
+Otto
+</div>
 
-<div class="person"><input type="checkbox" id="edith" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">Edith</div>
+<div class="person">
+<input type="checkbox" id="edith" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">
+Edith
+</div>
 
-<div class="person"><input type="checkbox" id="rosa" checked>
-<img src="https://via.placeholder.com/30">Rosa</div>
+<div class="person">
+<input type="checkbox" id="rosa" checked>
+<img src="images/rosa.jpg">
+Rosa
+</div>
 
-<div class="person"><input type="checkbox" id="judy" checked>
-<img src="https://via.placeholder.com/30">Judy</div>
+<div class="person">
+<input type="checkbox" id="judy" checked>
+<img src="images/judy.jpg">
+Judy
+</div>
 
 <div id="sliderContainer">
 <b>Jaar: <span id="yearLabel">1942</span></b><br>
 <input type="range" id="yearSlider" min="1942" max="1945" value="1942">
+</div>
+
+</div>
+
+<!-- LEGENDA -->
+<div id="legend">
+<b>Legenda</b>
+
+<div class="legend-item">
+<div class="legend-line" style="background:red;"></div>
+Deportatie (Frank)
+</div>
+
+<div class="legend-item">
+<div class="legend-line" style="background:blue;"></div>
+Kampverplaatsing
+</div>
+
+<div class="legend-item">
+<div class="legend-line" style="background:green;"></div>
+Deportatie (De Winter)
+</div>
+
+<div class="legend-item">
+<div class="legend-line" style="background:orange;"></div>
+Dwangarbeid
+</div>
+
+<div class="legend-item">
+<div class="legend-line" style="background:black; border-top:2px dashed black;"></div>
+Repatriëring (zee)
+</div>
+
+<div class="legend-item">
+<div class="legend-line" style="background:purple;"></div>
+Repatriëring (land)
 </div>
 
 </div>
@@ -95,70 +172,58 @@ var layers = {
 };
 
 // ==========================
-// ROUTES MET JAAR
+// DATA
 // ==========================
 
 var data = [
-    // FRANK deportatie (1944)
-    {year:1944, persons:["anne","margot","otto","edith"],
-     coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],
-     [53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
-     style:{color:'red'}},
 
-    // Anne & Margot (1944)
-    {year:1944, persons:["anne","margot"],
-     coords:[[50.03,19.17],[52.52,13.40],[53.55,9.99],[52.75,9.90]],
-     style:{color:'blue'}},
+{year:1944, persons:["anne","margot","otto","edith"],
+coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],
+[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+style:{color:'red'}},
 
-    // De Winter deportatie (1943)
-    {year:1943, persons:["rosa","judy"],
-     coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],
-     [53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
-     style:{color:'green'}},
+{year:1944, persons:["anne","margot"],
+coords:[[50.03,19.17],[52.52,13.40],[53.55,9.99],[52.75,9.90]],
+style:{color:'blue'}},
 
-    // Judy Kratzau (1944)
-    {year:1944, persons:["judy"],
-     coords:[[50.03,19.17],[50.81,14.96]],
-     style:{color:'orange',dashArray:'5,5'}},
+{year:1943, persons:["rosa","judy"],
+coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],
+[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+style:{color:'green'}},
 
-    // Repatriëring Rosa + Otto (1945)
-    {year:1945, persons:["rosa","otto"],
-     coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],
-     [43,34],[38,28],[36,20],[43.29,5.36],
-     [49.61,6.13],[51.19,5.98],[52.09,5.12]],
-     style:{color:'black',dashArray:'8,10'}},
+{year:1944, persons:["judy"],
+coords:[[50.03,19.17],[50.81,14.96]],
+style:{color:'orange',dashArray:'5,5'}},
 
-    // Judy repatriëring (1945)
-    {year:1945, persons:["judy"],
-     coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],
-     [49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
-     style:{color:'purple'}}
+{year:1945, persons:["rosa","otto"],
+coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],
+[43,34],[38,28],[36,20],[43.29,5.36],
+[49.61,6.13],[51.19,5.98],[52.09,5.12]],
+style:{color:'black',dashArray:'8,10'}},
+
+{year:1945, persons:["judy"],
+coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],
+[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
+style:{color:'purple'}}
+
 ];
 
 // ==========================
-// RENDER FUNCTIE
+// RENDER
 // ==========================
 
 function render(year){
-
     Object.values(layers).forEach(l => l.clearLayers());
 
     data.forEach(function(route){
-
         if(route.year <= year){
-
             route.persons.forEach(function(p){
-
                 if(document.getElementById(p).checked){
                     L.polyline(route.coords, route.style).addTo(layers[p]);
                 }
-
             });
-
         }
-
     });
-
 }
 
 // ==========================
@@ -179,7 +244,6 @@ slider.addEventListener("input", function(){
     });
 });
 
-// INIT
 render(1942);
 
 </script>
