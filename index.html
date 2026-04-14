@@ -78,7 +78,7 @@ const routes = {
 "Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]]
 };
 
-// 🚂 Transport 3 sept 1944
+// 🚂 transport 3 sept 1944
 const transport3Sept1944 = [
 [52.9153,6.6097],
 [52.9967,6.5625],
@@ -94,7 +94,7 @@ const transport3Sept1944 = [
 [50.0359,19.1783]
 ];
 
-// 🚢 Monowai (GeoJSON)
+// 🚢 Monowai
 const monowaiGeoJSON = {
 "type":"FeatureCollection",
 "features":[
@@ -107,7 +107,6 @@ const monowaiGeoJSON = {
 ]
 };
 
-// converter
 const monowaiRoute = monowaiGeoJSON.features.map(f=>{
 const [lon,lat]=f.geometry.coordinates;
 return {name:f.properties.name,date:f.properties.date,coords:[lat,lon]};
@@ -115,12 +114,70 @@ return {name:f.properties.name,date:f.properties.date,coords:[lat,lon]};
 
 // info
 const infoData = {
-"Rosa de Winter":"Overleefde Auschwitz en keerde terug via de Monowai.",
-"Edith Frank":"Moeder van Anne Frank. Overleed in Auschwitz.",
-"Otto Frank":"Overleefde Auschwitz en keerde terug via de Monowai.",
-"Judith de Winter":"Dochter van Rosa de Winter.",
-"westerbork":"Doorgangskamp.",
-"auschwitz":"Aankomstpunt van transport 3 september 1944."
+
+"Rosa de Winter":`
+<h3>Rosa de Winter</h3>
+Overleefde Auschwitz.
+
+In het kamp maakte zij deel uit van netwerken van onderlinge zorg.
+Zij was aanwezig bij het overlijden van Edith Frank.
+
+Na de bevrijding keerde zij terug via de Monowai.
+`,
+
+"Edith Frank":`
+<h3>Edith Frank</h3>
+Moeder van Anne Frank.
+
+In Auschwitz ernstig verzwakt door honger en ziekte.
+Werd verzorgd door medegevangenen, waaronder Rosa de Winter.
+
+Overleed in januari 1945.
+`,
+
+"Otto Frank":`
+<h3>Otto Frank</h3>
+Overleefde Auschwitz en keerde via Odessa en de Monowai terug naar West-Europa.
+`,
+
+"Judith de Winter":`
+<h3>Judith de Winter</h3>
+Dochter van Rosa. Werd samen met haar moeder gedeporteerd.
+`,
+
+"deportatie":`
+<h3>Deportatietrein</h3>
+Transporten vonden plaats in afgesloten goederenwagons.
+
+Reizen duurden meerdere dagen zonder voldoende voedsel, water of sanitaire voorzieningen.
+De trein volgde het bestaande Europese spoornetwerk en vormde een essentieel onderdeel
+van het deportatiesysteem.
+`,
+
+"kratzau":`
+<h3>Werkkamp Kratzau</h3>
+Kratzau (nu Chrastava) was een nevenkamp binnen het concentratiekampnetwerk.
+
+Gevangenen werden ingezet voor dwangarbeid onder zware omstandigheden,
+met weinig voedsel en slechte huisvesting.
+
+Zoals in veel werkkampen draaide het bestaan om overleven binnen een systeem
+van uitputting en controle.
+`,
+
+"monowai":`
+<h3>Repatriëring – schip Monowai</h3>
+Na de bevrijding werden overlevenden vanuit Oost-Europa per schip gerepatrieerd.
+
+De Monowai vertrok vanuit Odessa en voer via de Bosporus en de Middellandse Zee
+naar Marseille.
+
+De reis markeerde een overgang: van kampgevangenschap naar terugkeer,
+maar ook naar onzekerheid over familie, thuis en toekomst.
+`,
+
+"westerbork":"Doorgangskamp in Nederland.",
+"auschwitz":"Bestemming van deportaties."
 };
 
 function showInfo(key){
@@ -146,29 +203,38 @@ weight:3
 );
 });
 
-// 🔴 transport 3 sept 1944
+// deportatie
 layers.push(
 L.polyline(transport3Sept1944,{
 color:"darkred",
 weight:6
 })
-.bindPopup("<b>Transport 3 september 1944</b><br>Laatste grote deportatie naar Auschwitz.")
+.on("click",()=>showInfo("deportatie"))
 .addTo(map)
 );
 
 // Westerbork
 layers.push(
 L.circleMarker([52.92,6.61],{radius:10,fillColor:"yellow",fillOpacity:1})
-.on("click",()=>showInfo("westerbork")).addTo(map)
+.on("click",()=>showInfo("westerbork"))
+.addTo(map)
 );
 
 // Auschwitz
 layers.push(
 L.circleMarker([50.03,19.2],{radius:10,fillColor:"red",fillOpacity:1})
-.on("click",()=>showInfo("auschwitz")).addTo(map)
+.on("click",()=>showInfo("auschwitz"))
+.addTo(map)
 );
 
-// 🚢 Monowai alleen Otto + Rosa
+// Kratzau
+layers.push(
+L.circleMarker([50.8167,14.9667],{radius:8,fillColor:"gray",fillOpacity:1})
+.on("click",()=>showInfo("kratzau"))
+.addTo(map)
+);
+
+// Monowai
 if(activePersons.has("Otto Frank") || activePersons.has("Rosa de Winter")){
 
 const latlngs = monowaiRoute.map(p=>p.coords);
@@ -178,7 +244,9 @@ L.polyline(latlngs,{
 color:"cyan",
 dashArray:"6,10",
 weight:4
-}).addTo(map)
+})
+.on("click",()=>showInfo("monowai"))
+.addTo(map)
 );
 
 monowaiRoute.forEach(p=>{
