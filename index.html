@@ -10,7 +10,7 @@
 <style>
 #map { height: 100vh; }
 
-/* UI rechtsboven */
+/* UI */
 #controls {
     position: absolute;
     top: 10px;
@@ -36,7 +36,7 @@
     margin-right: 6px;
 }
 
-/* Legenda rechtsonder */
+/* legenda */
 #legend {
     position: absolute;
     bottom: 20px;
@@ -113,6 +113,12 @@
 <div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee</div>
 <div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land</div>
 
+<div style="margin-top:8px;"><b>Knooppunten</b></div>
+<div class="legend-item"><div class="legend-line" style="background:white; border:1px solid black;"></div>Start</div>
+<div class="legend-item"><div class="legend-line" style="background:yellow;"></div>Ontmoeting</div>
+<div class="legend-item"><div class="legend-line" style="background:red;"></div>Kamp</div>
+<div class="legend-item"><div class="legend-line" style="background:blue;"></div>Transport</div>
+
 </div>
 
 <div id="map"></div>
@@ -135,7 +141,7 @@ judy:L.layerGroup().addTo(map)
 
 var nodeLayer = L.layerGroup().addTo(map);
 
-// DATA ROUTES
+// ROUTES
 var data = [
 
 {year:1944, persons:["anne","margot","otto","edith"],
@@ -150,28 +156,89 @@ style:{color:'blue'}},
 coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
 style:{color:'green'}},
 
+// Judy naar Kratzau (gecorrigeerd)
 {year:1944, persons:["judy"],
-coords:[[50.03,19.17],[50.81,14.96]],
+coords:[
+[50.03,19.17],
+[50.67,17.92],
+[51.10,17.03],
+[50.76,15.05],
+[50.8167,14.9667]
+],
 style:{color:'orange',dashArray:'5,5'}},
 
+// Repatriëring Rosa + Otto via Luxemburg → Roermond
 {year:1945, persons:["rosa","otto"],
-coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],[43,34],[38,28],[36,20],[43.29,5.36],[49.61,6.13],[51.19,5.98],[52.09,5.12]],
+coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],[43,34],[38,28],[36,20],
+[43.29,5.36],[49.61,6.13],[51.19,5.98],[52.09,5.12]],
 style:{color:'black',dashArray:'8,10'}},
 
+// Judy repatriëring
 {year:1945, persons:["judy"],
-coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
+coords:[[50.8167,14.9667],[50.76,15.05],[50.07,14.43],[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
 style:{color:'purple'}}
 
 ];
 
-// KNOOPPUNTEN
+// NODE TYPES
+function getNodeStyle(type){
+if(type==="start") return {color:"black", fillColor:"white"};
+if(type==="meeting") return {color:"black", fillColor:"yellow"};
+if(type==="camp") return {color:"black", fillColor:"red"};
+if(type==="transport") return {color:"black", fillColor:"blue"};
+}
+
+// NODES
 var nodes = [
-{year:1942, coords:[52.37,4.89], text:"Amsterdam – Onderduik"},
-{year:1943, coords:[52.14,6.19], text:"Zutphen – Vertrek"},
-{year:1943, coords:[52.91,6.58], text:"Westerbork – Familie Frank en de Winter ontmoeten elkaar in Strafbarak 67 en sluiten vriendschap"},
-{year:1944, coords:[50.03,19.17], text:"Auschwitz – Na aankomst in Auschwitz op 6 september 1944 werden de mannen en vrouwen van elkaar gescheiden en volgden er selecties.<br>Anne en Margot werden in oktober 1944 geselecteerd voor deportatie naar Bergen-Belsen.<br>Omstreekst dezelfde tijd werd Judith gedeporteerd naarKratzau, waardoor zowel Rosa als Edith zonder hun dochters in Auschwitz achterbleven. Rosa schreef daarover later: ‘Wij troosten elkaar en worden vriendinnen."},
-{year:1945, coords:[52.75,9.90], text:"Bergen-Belsen – Anne & Margot overlijden"},
-{year:1945, coords:[51.19,5.98], text:"Roermond – Hereniging"}
+
+{year:1942,type:"start",coords:[52.37,4.89],
+title:"Amsterdam",
+persons:["Anne Frank","Margot Frank","Otto Frank","Edith Frank"],
+focusPersons:["anne","margot","otto","edith"],
+desc:"Onderduik van de familie Frank."},
+
+{year:1943,type:"start",coords:[52.14,6.19],
+title:"Zutphen",
+persons:["Rosa de Winter","Judy de Winter"],
+focusPersons:["rosa","judy"],
+desc:"Vertrek van Rosa en Judy."},
+
+{year:1943,type:"meeting",coords:[52.91,6.58],
+title:"Westerbork",
+persons:["Frank familie","De Winter familie"],
+focusPersons:["anne","margot","otto","edith","rosa","judy"],
+desc:"Ontmoeting van beide families."},
+
+{year:1944,type:"camp",coords:[50.03,19.17],
+title:"Auschwitz",
+persons:["Allen"],
+focusPersons:["anne","margot","otto","edith","rosa","judy"],
+desc:"Scheiding, overlijden Edith."},
+
+{year:1944,type:"transport",coords:[50.76,15.05],
+title:"Liberec",
+persons:["Judy de Winter"],
+focusPersons:["judy"],
+desc:"Transportknooppunt richting Kratzau."},
+
+{year:1944,type:"camp",coords:[50.8167,14.9667],
+title:"Kratzau",
+persons:["Judy de Winter"],
+focusPersons:["judy"],
+desc:"Vrouwelijk werkkamp (subkamp Gross-Rosen)."}, 
+
+{year:1944,type:"camp",coords:[52.75,9.90],
+title:"Bergen-Belsen",
+persons:["Anne Frank","Margot Frank"],
+focusPersons:["anne","margot"],
+desc:"Overlijden van Anne en Margot."},
+
+{year:1945,type:"meeting",coords:[51.19,5.98],
+title:"Roermond",
+persons:["Rosa de Winter","Judy de Winter"],
+focusPersons:["rosa","judy"],
+desc:"Hereniging."}
+
 ];
 
 // HOVER
@@ -186,37 +253,55 @@ nodeLayer.clearLayers();
 data.forEach(function(route){
 if(route.year <= year){
 route.persons.forEach(function(p){
-
 if(document.getElementById(p).checked){
 
 var style = Object.assign({}, route.style);
 
 if(hoverPerson){
-if(p === hoverPerson){
-style.weight = 6;
-} else {
-style.opacity = 0.2;
-}
+if(p===hoverPerson){style.weight=6;}
+else{style.opacity=0.2;}
 }
 
 L.polyline(route.coords, style).addTo(layers[p]);
-
 }
-
 });
 }
 });
 
+// nodes
 nodes.forEach(function(n){
 if(n.year <= year){
-L.circleMarker(n.coords,{
-radius:6,
-color:'black',
-fillColor:'yellow',
+
+var style = getNodeStyle(n.type);
+
+var marker = L.circleMarker(n.coords,{
+radius:7,
+color:style.color,
+fillColor:style.fillColor,
 fillOpacity:0.9
 })
-.bindPopup(n.text)
+.bindPopup("<b>"+n.title+"</b><br>"+n.desc)
 .addTo(nodeLayer);
+
+// focus klik
+marker.on("click", function(){
+
+document.getElementById("yearSlider").value = n.year;
+document.getElementById("yearLabel").innerText = n.year;
+
+["anne","margot","otto","edith","rosa","judy"].forEach(p=>{
+document.getElementById(p).checked=false;
+});
+
+n.focusPersons.forEach(p=>{
+document.getElementById(p).checked=true;
+});
+
+map.setView(n.coords,6);
+render(n.year);
+
+});
+
 }
 });
 
@@ -234,7 +319,6 @@ render(parseInt(document.getElementById("yearSlider").value));
 });
 });
 
-// HOVER EVENTS
 document.querySelectorAll(".person").forEach(function(el){
 el.addEventListener("mouseenter", function(){
 hoverPerson = el.dataset.person;
