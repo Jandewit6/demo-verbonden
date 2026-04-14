@@ -17,8 +17,7 @@
     background: white;
     padding: 10px;
     z-index: 1000;
-    max-width: 200px;
-    font-size: 14px;
+    max-width: 220px;
 }
 
 .person {
@@ -30,8 +29,12 @@
 .person img {
     width: 30px;
     height: 30px;
-    margin-right: 8px;
     border-radius: 50%;
+    margin-right: 6px;
+}
+
+#sliderContainer {
+    margin-top: 10px;
 }
 </style>
 </head>
@@ -40,40 +43,27 @@
 
 <div id="controls">
 
-<div class="person">
-<input type="checkbox" id="anne" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">
-<label for="anne">Anne</label>
-</div>
+<div class="person"><input type="checkbox" id="anne" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">Anne</div>
 
-<div class="person">
-<input type="checkbox" id="margot" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">
-<label>Margot</label>
-</div>
+<div class="person"><input type="checkbox" id="margot" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">Margot</div>
 
-<div class="person">
-<input type="checkbox" id="otto" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">
-<label>Otto</label>
-</div>
+<div class="person"><input type="checkbox" id="otto" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">Otto</div>
 
-<div class="person">
-<input type="checkbox" id="edith" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">
-<label>Edith</label>
-</div>
+<div class="person"><input type="checkbox" id="edith" checked>
+<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">Edith</div>
 
-<div class="person">
-<input type="checkbox" id="rosa" checked>
-<img src="https://via.placeholder.com/30">
-<label>Rosa</label>
-</div>
+<div class="person"><input type="checkbox" id="rosa" checked>
+<img src="https://via.placeholder.com/30">Rosa</div>
 
-<div class="person">
-<input type="checkbox" id="judy" checked>
-<img src="https://via.placeholder.com/30">
-<label>Judy</label>
+<div class="person"><input type="checkbox" id="judy" checked>
+<img src="https://via.placeholder.com/30">Judy</div>
+
+<div id="sliderContainer">
+<b>Jaar: <span id="yearLabel">1942</span></b><br>
+<input type="range" id="yearSlider" min="1942" max="1945" value="1942">
 </div>
 
 </div>
@@ -82,13 +72,17 @@
 
 <script>
 
+// ==========================
+// MAP
+// ==========================
+
 var map = L.map('map').setView([52.1,5.3],5);
 
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png')
 .addTo(map);
 
 // ==========================
-// LAGEN PER PERSOON
+// LAYERS
 // ==========================
 
 var layers = {
@@ -101,99 +95,92 @@ var layers = {
 };
 
 // ==========================
-// FUNCTIE OM TOE TE VOEGEN
+// ROUTES MET JAAR
 // ==========================
 
-function addMarker(layer, coords, text){
-    L.marker(coords).bindPopup(text).addTo(layer);
+var data = [
+    // FRANK deportatie (1944)
+    {year:1944, persons:["anne","margot","otto","edith"],
+     coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],
+     [53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+     style:{color:'red'}},
+
+    // Anne & Margot (1944)
+    {year:1944, persons:["anne","margot"],
+     coords:[[50.03,19.17],[52.52,13.40],[53.55,9.99],[52.75,9.90]],
+     style:{color:'blue'}},
+
+    // De Winter deportatie (1943)
+    {year:1943, persons:["rosa","judy"],
+     coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],
+     [53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
+     style:{color:'green'}},
+
+    // Judy Kratzau (1944)
+    {year:1944, persons:["judy"],
+     coords:[[50.03,19.17],[50.81,14.96]],
+     style:{color:'orange',dashArray:'5,5'}},
+
+    // Repatriëring Rosa + Otto (1945)
+    {year:1945, persons:["rosa","otto"],
+     coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],
+     [43,34],[38,28],[36,20],[43.29,5.36],
+     [49.61,6.13],[51.19,5.98],[52.09,5.12]],
+     style:{color:'black',dashArray:'8,10'}},
+
+    // Judy repatriëring (1945)
+    {year:1945, persons:["judy"],
+     coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],
+     [49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
+     style:{color:'purple'}}
+];
+
+// ==========================
+// RENDER FUNCTIE
+// ==========================
+
+function render(year){
+
+    Object.values(layers).forEach(l => l.clearLayers());
+
+    data.forEach(function(route){
+
+        if(route.year <= year){
+
+            route.persons.forEach(function(p){
+
+                if(document.getElementById(p).checked){
+                    L.polyline(route.coords, route.style).addTo(layers[p]);
+                }
+
+            });
+
+        }
+
+    });
+
 }
 
-function addLine(layer, coords, style){
-    L.polyline(coords, style).addTo(layer);
-}
-
 // ==========================
-// ANNE / MARGOT / OTTO / EDITH
+// EVENTS
 // ==========================
 
-var frankRoute = [
-[52.3702,4.8952],[52.9167,6.5833],[53.2194,6.5665],
-[53.1833,7.2167],[53.0793,8.8017],[52.3759,9.7320],
-[52.5200,13.4050],[51.1079,17.0385],[50.0359,19.1783]
-];
+var slider = document.getElementById("yearSlider");
+var label = document.getElementById("yearLabel");
 
-addLine(layers.anne, frankRoute, {color:'red'});
-addLine(layers.margot, frankRoute, {color:'red'});
-addLine(layers.otto, frankRoute, {color:'red'});
-addLine(layers.edith, frankRoute, {color:'red'});
-
-// Anne & Margot vervolg
-var sisters = [
-[50.0359,19.1783],[52.5200,13.4050],
-[53.5511,9.9937],[52.7596,9.9059]
-];
-
-addLine(layers.anne, sisters, {color:'blue'});
-addLine(layers.margot, sisters, {color:'blue'});
-
-// Otto repatriëring (zelfde als Rosa)
-var returnRoute = [
-[50.0359,19.1783],[49.8397,24.0297],[46.4825,30.7233],
-[43,34],[38,28],[36,20],[43.2965,5.3698],
-[50.1109,8.6821],[52.0907,5.1214]
-];
-
-addLine(layers.otto, returnRoute, {color:'black',dashArray:'8,10'});
-
-// ==========================
-// ROSA
-// ==========================
-
-var rosaRoute = [
-[52.1400,6.1944],[52.9167,6.5833],[53.2194,6.5665],
-[53.1833,7.2167],[53.0793,8.8017],[52.3759,9.7320],
-[52.5200,13.4050],[51.1079,17.0385],[50.0359,19.1783]
-];
-
-addLine(layers.rosa, rosaRoute, {color:'green'});
-addLine(layers.rosa, returnRoute, {color:'black',dashArray:'8,10'});
-
-// ==========================
-// JUDY
-// ==========================
-
-var judyRoute = [
-[52.1400,6.1944],[52.9167,6.5833],[50.0359,19.1783]
-];
-
-addLine(layers.judy, judyRoute, {color:'green'});
-
-var judyReturn = [
-[50.8167,14.9667],[50.7671,15.0562],[50.0755,14.4378],
-[49.7384,13.3736],[49.9481,11.5783],
-[50.8503,4.3517],[51.1942,5.9870]
-];
-
-addLine(layers.judy, judyReturn, {color:'purple'});
-
-// ==========================
-// FILTER LOGICA
-// ==========================
-
-function toggleLayer(id){
-    var checkbox = document.getElementById(id);
-    if(checkbox.checked){
-        map.addLayer(layers[id]);
-    } else {
-        map.removeLayer(layers[id]);
-    }
-}
+slider.addEventListener("input", function(){
+    label.innerText = slider.value;
+    render(parseInt(slider.value));
+});
 
 ["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
     document.getElementById(id).addEventListener("change", function(){
-        toggleLayer(id);
+        render(parseInt(slider.value));
     });
 });
+
+// INIT
+render(1942);
 
 </script>
 
