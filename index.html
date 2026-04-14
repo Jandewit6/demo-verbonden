@@ -41,9 +41,6 @@ body { margin:0; font-family:Arial; }
 <div id="map"></div>
 
 <div id="controls">
-<b>Tijd</b><br>
-<input type="range" min="0" max="10" value="0" id="slider"><br><br>
-
 <b>Personen</b><br>
 <button onclick="togglePerson('Anne Frank')">Anne</button>
 <button onclick="togglePerson('Edith Frank')">Edith</button>
@@ -73,7 +70,7 @@ const colors = {
 
 let activePersons = new Set(Object.keys(colors));
 
-// routes
+// basisroutes
 const routes = {
 "Rosa de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
 "Judith de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
@@ -81,14 +78,23 @@ const routes = {
 "Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]]
 };
 
-// deportatie
-const deportationRoute = [
-[52.14,6.2],
-[52.92,6.61],
-[50.03,19.2]
+// 🚂 Transport 3 sept 1944
+const transport3Sept1944 = [
+[52.9153,6.6097],
+[52.9967,6.5625],
+[52.5168,6.0830],
+[52.2550,6.1639],
+[52.3075,6.9358],
+[52.3000,7.1667],
+[52.2799,8.0472],
+[52.3759,9.7320],
+[52.1205,11.6276],
+[51.4825,11.9700],
+[51.1079,17.0385],
+[50.0359,19.1783]
 ];
 
-// 🚢 GEOJSON Monowai (origineel)
+// 🚢 Monowai (GeoJSON)
 const monowaiGeoJSON = {
 "type":"FeatureCollection",
 "features":[
@@ -101,24 +107,20 @@ const monowaiGeoJSON = {
 ]
 };
 
-// 🔁 FIX: GeoJSON → Leaflet coords
+// converter
 const monowaiRoute = monowaiGeoJSON.features.map(f=>{
 const [lon,lat]=f.geometry.coordinates;
-return {
-name:f.properties.name,
-date:f.properties.date,
-coords:[lat,lon]
-};
+return {name:f.properties.name,date:f.properties.date,coords:[lat,lon]};
 });
 
 // info
 const infoData = {
-"Rosa de Winter":"Rosa zorgde voor Edith Frank in Auschwitz en was aanwezig bij haar overlijden.",
+"Rosa de Winter":"Overleefde Auschwitz en keerde terug via de Monowai.",
 "Edith Frank":"Moeder van Anne Frank. Overleed in Auschwitz.",
-"Otto Frank":"Keerde terug via de Monowai naar Marseille.",
+"Otto Frank":"Overleefde Auschwitz en keerde terug via de Monowai.",
 "Judith de Winter":"Dochter van Rosa de Winter.",
 "westerbork":"Doorgangskamp.",
-"auschwitz":"Vernietigingskamp."
+"auschwitz":"Aankomstpunt van transport 3 september 1944."
 };
 
 function showInfo(key){
@@ -144,9 +146,14 @@ weight:3
 );
 });
 
-// deportatie
+// 🔴 transport 3 sept 1944
 layers.push(
-L.polyline(deportationRoute,{color:"darkred",weight:5}).addTo(map)
+L.polyline(transport3Sept1944,{
+color:"darkred",
+weight:6
+})
+.bindPopup("<b>Transport 3 september 1944</b><br>Laatste grote deportatie naar Auschwitz.")
+.addTo(map)
 );
 
 // Westerbork
@@ -196,42 +203,6 @@ function resetPersons(){
 activePersons=new Set(Object.keys(colors));
 update();
 }
-
-// animatie
-let trainMarker = L.circleMarker(deportationRoute[0],{radius:8,color:"black",fillColor:"yellow",fillOpacity:1}).addTo(map);
-let shipMarker = L.circleMarker(monowaiRoute[0].coords,{radius:8,color:"blue",fillColor:"cyan",fillOpacity:1}).addTo(map);
-
-function interpolate(a,b,t){
-return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
-}
-
-function updateTrain(v){
-const total=deportationRoute.length-1;
-const seg=Math.floor(v/10*total);
-const t=(v/10*total)-seg;
-
-if(seg>=total){trainMarker.setLatLng(deportationRoute[total]);return;}
-trainMarker.setLatLng(interpolate(deportationRoute[seg],deportationRoute[seg+1],t));
-}
-
-function updateShip(v){
-const total=monowaiRoute.length-1;
-const seg=Math.floor(v/10*total);
-const t=(v/10*total)-seg;
-
-if(seg>=total){shipMarker.setLatLng(monowaiRoute[total].coords);return;}
-const a=monowaiRoute[seg].coords;
-const b=monowaiRoute[seg+1].coords;
-shipMarker.setLatLng(interpolate(a,b,t));
-}
-
-// slider
-document.getElementById("slider").addEventListener("input",(e)=>{
-const v=parseInt(e.target.value);
-update();
-updateTrain(v);
-updateShip(v);
-});
 
 // init
 update();
