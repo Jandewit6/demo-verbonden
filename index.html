@@ -8,246 +8,233 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-#map { height: 100vh; }
+body { margin:0; font-family:Arial; }
+#map { height:100vh; }
 
-/* UI rechtsboven */
 #controls {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    background: white;
-    padding: 10px;
-    z-index: 1000;
-    max-width: 240px;
-    box-shadow: 0 0 12px rgba(0,0,0,0.3);
+  position:absolute;
+  top:10px;
+  left:10px;
+  background:white;
+  padding:10px;
+  border-radius:8px;
+  z-index:1000;
 }
 
-.person {
-    display: flex;
-    align-items: center;
-    margin-bottom: 6px;
-    cursor: pointer;
-}
-
-.person img {
-    width: 30px;
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 6px;
-}
-
-/* Legenda rechtsonder */
-#legend {
-    position: absolute;
-    bottom: 20px;
-    right: 10px;
-    background: white;
-    padding: 10px;
-    z-index: 1000;
-    box-shadow: 0 0 12px rgba(0,0,0,0.3);
-    font-size: 13px;
-}
-
-.legend-item {
-    display: flex;
-    align-items: center;
-    margin-bottom: 5px;
-}
-
-.legend-line {
-    width: 30px;
-    height: 4px;
-    margin-right: 6px;
+#infoPanel {
+  position:absolute;
+  right:10px;
+  top:10px;
+  width:320px;
+  background:white;
+  padding:15px;
+  border-radius:8px;
+  z-index:1000;
+  max-height:90vh;
+  overflow:auto;
 }
 </style>
 </head>
 
 <body>
 
-<!-- FILTERS -->
-<div id="controls">
-
-<div class="person" data-person="anne">
-<input type="checkbox" id="anne" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/4/4c/Anne_Frank_1940_cropped.jpg">Anne
-</div>
-
-<div class="person" data-person="margot">
-<input type="checkbox" id="margot" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/6/6b/Margot_Frank.jpg">Margot
-</div>
-
-<div class="person" data-person="otto">
-<input type="checkbox" id="otto" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/3/3f/Otto_Frank.jpg">Otto
-</div>
-
-<div class="person" data-person="edith">
-<input type="checkbox" id="edith" checked>
-<img src="https://upload.wikimedia.org/wikipedia/commons/0/0c/Edith_Frank.jpg">Edith
-</div>
-
-<div class="person" data-person="rosa">
-<input type="checkbox" id="rosa" checked>
-<img src="images/rosa.jpg">Rosa
-</div>
-
-<div class="person" data-person="judy">
-<input type="checkbox" id="judy" checked>
-<img src="images/judy.jpg">Judy
-</div>
-
-<b>Jaar: <span id="yearLabel">1942</span></b><br>
-<input type="range" id="yearSlider" min="1942" max="1945" value="1942">
-
-</div>
-
-<!-- LEGENDA -->
-<div id="legend">
-<b>Legenda</b>
-
-<div class="legend-item"><div class="legend-line" style="background:red"></div>Deportatie</div>
-<div class="legend-item"><div class="legend-line" style="background:blue"></div>Kampverplaatsing</div>
-<div class="legend-item"><div class="legend-line" style="background:green"></div>De Winter</div>
-<div class="legend-item"><div class="legend-line" style="background:orange"></div>Dwangarbeid</div>
-<div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee</div>
-<div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land</div>
-
-</div>
-
 <div id="map"></div>
+
+<div id="controls">
+<b>Tijd</b><br>
+<input type="range" min="0" max="10" value="0" id="slider"><br><br>
+
+<b>Personen</b><br>
+<button onclick="togglePerson('Anne Frank')">Anne</button>
+<button onclick="togglePerson('Edith Frank')">Edith</button>
+<button onclick="togglePerson('Otto Frank')">Otto</button>
+<button onclick="togglePerson('Rosa de Winter')">Rosa</button>
+<button onclick="togglePerson('Judith de Winter')">Judith</button><br><br>
+
+<button onclick="resetPersons()">Reset</button>
+</div>
+
+<div id="infoPanel">Klik op een persoon of locatie</div>
 
 <script>
 
-// MAP
-var map = L.map('map').setView([52.1,5.3],5);
+// kaart
+const map = L.map('map').setView([50,10], 4);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// LAYERS
-var layers = {
-anne:L.layerGroup().addTo(map),
-margot:L.layerGroup().addTo(map),
-otto:L.layerGroup().addTo(map),
-edith:L.layerGroup().addTo(map),
-rosa:L.layerGroup().addTo(map),
-judy:L.layerGroup().addTo(map)
+// kleuren
+const colors = {
+  "Anne Frank":"red",
+  "Edith Frank":"pink",
+  "Otto Frank":"green",
+  "Rosa de Winter":"blue",
+  "Judith de Winter":"purple"
 };
 
-var nodeLayer = L.layerGroup().addTo(map);
+let activePersons = new Set(Object.keys(colors));
 
-// DATA ROUTES
-var data = [
+// routes
+const routes = {
+"Rosa de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
+"Judith de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
+"Edith Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]],
+"Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]]
+};
 
-{year:1944, persons:["anne","margot","otto","edith"],
-coords:[[52.37,4.89],[52.91,6.58],[53.21,6.56],[53.18,7.21],[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
-style:{color:'red'}},
-
-{year:1944, persons:["anne","margot"],
-coords:[[50.03,19.17],[52.52,13.40],[53.55,9.99],[52.75,9.90]],
-style:{color:'blue'}},
-
-{year:1943, persons:["rosa","judy"],
-coords:[[52.14,6.19],[52.91,6.58],[53.21,6.56],[53.18,7.21],[53.07,8.80],[52.37,9.73],[52.52,13.40],[51.10,17.03],[50.03,19.17]],
-style:{color:'green'}},
-
-{year:1944, persons:["judy"],
-coords:[[50.03,19.17],[50.81,14.96]],
-style:{color:'orange',dashArray:'5,5'}},
-
-{year:1945, persons:["rosa","otto"],
-coords:[[50.03,19.17],[49.83,24.02],[46.48,30.72],[43,34],[38,28],[36,20],[43.29,5.36],[49.61,6.13],[51.19,5.98],[52.09,5.12]],
-style:{color:'black',dashArray:'8,10'}},
-
-{year:1945, persons:["judy"],
-coords:[[50.81,14.96],[50.76,15.05],[50.07,14.43],[49.73,13.37],[49.94,11.57],[50.85,4.35],[51.19,5.98]],
-style:{color:'purple'}}
-
+// deportatie
+const deportationRoute = [
+[52.14,6.2],
+[52.92,6.61],
+[50.03,19.2]
 ];
 
-// KNOOPPUNTEN
-var nodes = [
-{year:1942, coords:[52.37,4.89], text:"Amsterdam – Onderduik"},
-{year:1943, coords:[52.14,6.19], text:"Zutphen – Vertrek"},
-{year:1943, coords:[52.91,6.58], text:"Westerbork – Familie Frank en de Winter ontmoeten elkaar in Strafbarak 67 en sluiten vriendschap"},
-{year:1944, coords:[50.03,19.17], text:"Auschwitz – Na aankomst in Auschwitz op 6 september 1944 werden de mannen en vrouwen van elkaar gescheiden en volgden er selecties.<br>Anne en Margot werden in oktober 1944 geselecteerd voor deportatie naar Bergen-Belsen.<br>Omstreekst dezelfde tijd werd Judith gedeporteerd naarKratzau, waardoor zowel Rosa als Edith zonder hun dochters in Auschwitz achterbleven. Rosa schreef daarover later: ‘Wij troosten elkaar en worden vriendinnen."},
-{year:1945, coords:[52.75,9.90], text:"Bergen-Belsen – Anne & Margot overlijden"},
-{year:1945, coords:[51.19,5.98], text:"Roermond – Hereniging"}
-];
+// 🚢 GEOJSON Monowai (origineel)
+const monowaiGeoJSON = {
+"type":"FeatureCollection",
+"features":[
+{"type":"Feature","properties":{"name":"Odessa","date":"21 mei 1945"},"geometry":{"type":"Point","coordinates":[30.7233,46.4825]}},
+{"type":"Feature","properties":{"name":"Istanbul","date":"23 mei 1945"},"geometry":{"type":"Point","coordinates":[28.9784,41.0082]}},
+{"type":"Feature","properties":{"name":"Kreta","date":"24 mei 1945"},"geometry":{"type":"Point","coordinates":[24.8093,35.2401]}},
+{"type":"Feature","properties":{"name":"Sardinië","date":"25 mei 1945"},"geometry":{"type":"Point","coordinates":[9.0129,40.1209]}},
+{"type":"Feature","properties":{"name":"Corsica","date":"26 mei 1945"},"geometry":{"type":"Point","coordinates":[9.0129,42.0396]}},
+{"type":"Feature","properties":{"name":"Marseille","date":"27 mei 1945"},"geometry":{"type":"Point","coordinates":[5.3698,43.2965]}}
+]
+};
 
-// HOVER
-var hoverPerson = null;
+// 🔁 FIX: GeoJSON → Leaflet coords
+const monowaiRoute = monowaiGeoJSON.features.map(f=>{
+const [lon,lat]=f.geometry.coordinates;
+return {
+name:f.properties.name,
+date:f.properties.date,
+coords:[lat,lon]
+};
+});
 
-// RENDER
-function render(year){
+// info
+const infoData = {
+"Rosa de Winter":"Rosa zorgde voor Edith Frank in Auschwitz en was aanwezig bij haar overlijden.",
+"Edith Frank":"Moeder van Anne Frank. Overleed in Auschwitz.",
+"Otto Frank":"Keerde terug via de Monowai naar Marseille.",
+"Judith de Winter":"Dochter van Rosa de Winter.",
+"westerbork":"Doorgangskamp.",
+"auschwitz":"Vernietigingskamp."
+};
 
-Object.values(layers).forEach(l => l.clearLayers());
-nodeLayer.clearLayers();
-
-data.forEach(function(route){
-if(route.year <= year){
-route.persons.forEach(function(p){
-
-if(document.getElementById(p).checked){
-
-var style = Object.assign({}, route.style);
-
-if(hoverPerson){
-if(p === hoverPerson){
-style.weight = 6;
-} else {
-style.opacity = 0.2;
-}
-}
-
-L.polyline(route.coords, style).addTo(layers[p]);
-
+function showInfo(key){
+document.getElementById("infoPanel").innerHTML = infoData[key] || key;
 }
 
+let layers=[];
+
+function update(){
+
+layers.forEach(l=>map.removeLayer(l));
+layers=[];
+
+// routes
+Object.keys(routes).forEach(person=>{
+if(!activePersons.has(person)) return;
+
+layers.push(
+L.polyline(routes[person],{
+color:colors[person],
+weight:3
+}).on("click",()=>showInfo(person)).addTo(map)
+);
+});
+
+// deportatie
+layers.push(
+L.polyline(deportationRoute,{color:"darkred",weight:5}).addTo(map)
+);
+
+// Westerbork
+layers.push(
+L.circleMarker([52.92,6.61],{radius:10,fillColor:"yellow",fillOpacity:1})
+.on("click",()=>showInfo("westerbork")).addTo(map)
+);
+
+// Auschwitz
+layers.push(
+L.circleMarker([50.03,19.2],{radius:10,fillColor:"red",fillOpacity:1})
+.on("click",()=>showInfo("auschwitz")).addTo(map)
+);
+
+// 🚢 Monowai alleen Otto + Rosa
+if(activePersons.has("Otto Frank") || activePersons.has("Rosa de Winter")){
+
+const latlngs = monowaiRoute.map(p=>p.coords);
+
+layers.push(
+L.polyline(latlngs,{
+color:"cyan",
+dashArray:"6,10",
+weight:4
+}).addTo(map)
+);
+
+monowaiRoute.forEach(p=>{
+layers.push(
+L.circleMarker(p.coords,{radius:5,color:"cyan"})
+.bindPopup(`<b>${p.name}</b><br>${p.date}`)
+.addTo(map)
+);
 });
 }
-});
-
-nodes.forEach(function(n){
-if(n.year <= year){
-L.circleMarker(n.coords,{
-radius:6,
-color:'black',
-fillColor:'yellow',
-fillOpacity:0.9
-})
-.bindPopup(n.text)
-.addTo(nodeLayer);
-}
-});
 
 }
 
-// EVENTS
-document.getElementById("yearSlider").addEventListener("input", function(){
-document.getElementById("yearLabel").innerText = this.value;
-render(parseInt(this.value));
+// toggles
+function togglePerson(name){
+if(activePersons.has(name)) activePersons.delete(name);
+else activePersons.add(name);
+update();
+}
+
+function resetPersons(){
+activePersons=new Set(Object.keys(colors));
+update();
+}
+
+// animatie
+let trainMarker = L.circleMarker(deportationRoute[0],{radius:8,color:"black",fillColor:"yellow",fillOpacity:1}).addTo(map);
+let shipMarker = L.circleMarker(monowaiRoute[0].coords,{radius:8,color:"blue",fillColor:"cyan",fillOpacity:1}).addTo(map);
+
+function interpolate(a,b,t){
+return [a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t];
+}
+
+function updateTrain(v){
+const total=deportationRoute.length-1;
+const seg=Math.floor(v/10*total);
+const t=(v/10*total)-seg;
+
+if(seg>=total){trainMarker.setLatLng(deportationRoute[total]);return;}
+trainMarker.setLatLng(interpolate(deportationRoute[seg],deportationRoute[seg+1],t));
+}
+
+function updateShip(v){
+const total=monowaiRoute.length-1;
+const seg=Math.floor(v/10*total);
+const t=(v/10*total)-seg;
+
+if(seg>=total){shipMarker.setLatLng(monowaiRoute[total].coords);return;}
+const a=monowaiRoute[seg].coords;
+const b=monowaiRoute[seg+1].coords;
+shipMarker.setLatLng(interpolate(a,b,t));
+}
+
+// slider
+document.getElementById("slider").addEventListener("input",(e)=>{
+const v=parseInt(e.target.value);
+update();
+updateTrain(v);
+updateShip(v);
 });
 
-["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
-document.getElementById(id).addEventListener("change", function(){
-render(parseInt(document.getElementById("yearSlider").value));
-});
-});
-
-// HOVER EVENTS
-document.querySelectorAll(".person").forEach(function(el){
-el.addEventListener("mouseenter", function(){
-hoverPerson = el.dataset.person;
-render(parseInt(document.getElementById("yearSlider").value));
-});
-el.addEventListener("mouseleave", function(){
-hoverPerson = null;
-render(parseInt(document.getElementById("yearSlider").value));
-});
-});
-
-// INIT
-render(1942);
+// init
+update();
 
 </script>
 
