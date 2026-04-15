@@ -250,12 +250,12 @@ radius:6,color:'black',fillColor:'yellow',fillOpacity:0.9
 // EVENTS
 document.getElementById("yearSlider").addEventListener("input", function(){
 document.getElementById("yearLabel").innerText = this.value;
-render(parseInt(this.value));
+(parseInt(this.value));
 });
 
 ["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
 document.getElementById(id).addEventListener("change", function(){
-render(parseInt(document.getElementById("yearSlider").value));
+(parseInt(document.getElementById("yearSlider").value));
 });
 });
 
