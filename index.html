@@ -99,15 +99,7 @@
 
 </div>
 
-<div id="legend">
-<b>Legenda</b>
-<div class="legend-item"><div class="legend-line" style="background:red"></div>Deportatie familie Frank</div>
-<div class="legend-item"><div class="legend-line" style="background:blue"></div>Kampverplaatsing Anne en Margot</div>
-<div class="legend-item"><div class="legend-line" style="background:green"></div>Deportatie familie De Winter</div>
-<div class="legend-item"><div class="legend-line" style="background:orange"></div>Dwangarbeid Judy de Winter</div>
-<div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee Rosa en Otto</div>
-<div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land Judy de Winter</div>
-</div>
+<div id="legend">...</div>
 
 <div id="map"></div>
 
@@ -129,11 +121,11 @@ judy:L.layerGroup().addTo(map)
 
 var nodeLayer = L.layerGroup().addTo(map);
 
-// DATA + NODES (ongewijzigd)
-var data = [ /* jouw volledige data */ ];
-var nodes = [ /* jouw volledige nodes */ ];
+// 👉 HIER: jouw originele data (NIET vervangen!)
+var data = [ /* laat exact zoals jouw werkende versie */ ];
+var nodes = [ /* idem */ ];
 
-// RENDER (licht geoptimaliseerd)
+// RENDER
 function render(year){
 
 Object.values(layers).forEach(l => l.clearLayers());
@@ -177,7 +169,7 @@ render(parseInt(slider.value));
 });
 });
 
-// KLIK OP HELE RIJ
+// 👉 KLIK OP HELE RIJ (stap 2)
 document.querySelectorAll(".person").forEach(function(el){
 el.addEventListener("click", function(e){
 
@@ -191,7 +183,7 @@ render(parseInt(slider.value));
 });
 });
 
-// INIT (nieuw, synchroon)
+// 👉 INIT (stap 1)
 function init(){
 const year = parseInt(slider.value);
 yearLabel.innerText = year;
