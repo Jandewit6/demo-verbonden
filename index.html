@@ -64,49 +64,16 @@
 
 <div id="controls">
 
-<div class="person" data-person="anne">
-<input type="checkbox" id="anne" checked>
-<img src="https://images.memorix.nl/anf/thumb/1920x1080/e2721f7d-9990-e64e-aaf7-085e8c37b11d.jpg">Anne
-</div>
-
-<div class="person" data-person="margot">
-<input type="checkbox" id="margot" checked>
-<img src="https://images.memorix.nl/anf/thumb/1920x1080/9c2717fe-2305-e3c1-33eb-8cac8fb8d7aa.jpg">Margot
-</div>
-
-<div class="person" data-person="otto">
-<input type="checkbox" id="otto" checked>
-<img src="https://images.memorix.nl/anf/thumb/1920x1080/e73c20a4-8bb2-307d-f5f0-2d93291a2009.jpg">Otto
-</div>
-
-<div class="person" data-person="edith">
-<input type="checkbox" id="edith" checked>
-<img src="https://images.memorix.nl/anf/thumb/1920x1080/9006f8f0-6a33-baaf-a392-73cfcefdc04b.jpg">Edith
-</div>
-
-<div class="person" data-person="rosa">
-<input type="checkbox" id="rosa" checked>
-<img src="https://maior-images.memorix.nl/anf/iiif/744cbfdd-a75c-0f87-3264-3de82034dd1f/355,350,600,600/max/0/default.jpg">Rosa
-</div>
-
-<div class="person" data-person="judy">
-<input type="checkbox" id="judy" checked>
-<img src="https://maior-images.memorix.nl/anf/iiif/8b8544a8-c77b-3bcc-7511-b2bee22bf7b5/50,70,900,900/max/0/default.jpg">Judy
-</div>
+<div class="person" data-person="anne"><input type="checkbox" id="anne" checked>Anne</div>
+<div class="person" data-person="margot"><input type="checkbox" id="margot" checked>Margot</div>
+<div class="person" data-person="otto"><input type="checkbox" id="otto" checked>Otto</div>
+<div class="person" data-person="edith"><input type="checkbox" id="edith" checked>Edith</div>
+<div class="person" data-person="rosa"><input type="checkbox" id="rosa" checked>Rosa</div>
+<div class="person" data-person="judy"><input type="checkbox" id="judy" checked>Judy</div>
 
 <b>Jaar: <span id="yearLabel">1945</span></b><br>
 <input type="range" id="yearSlider" min="1942" max="1945" value="1945">
 
-</div>
-
-<div id="legend">
-<b>Legenda</b>
-<div class="legend-item"><div class="legend-line" style="background:red"></div>Deportatie familie Frank</div>
-<div class="legend-item"><div class="legend-line" style="background:blue"></div>Kampverplaatsing Anne en Margot</div>
-<div class="legend-item"><div class="legend-line" style="background:green"></div>Deportatie familie De Winter</div>
-<div class="legend-item"><div class="legend-line" style="background:orange"></div>Dwangarbeid Judy de Winter</div>
-<div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee Rosa en Otto</div>
-<div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land Judy de Winter</div>
 </div>
 
 <div id="map"></div>
@@ -130,10 +97,19 @@ judy:L.layerGroup().addTo(map)
 var nodeLayer = L.layerGroup().addTo(map);
 
 // DATA
-var data = [ /* volledig zoals eerder */ ];
+var data = [
+{year:1944, persons:["anne","margot","otto","edith"], coords:[[52.37,4.89],[52.91,6.58],[50.03,19.17]], style:{color:'red'}},
+{year:1943, persons:["rosa","judy"], coords:[[52.14,6.19],[52.91,6.58],[50.03,19.17]], style:{color:'green'}},
+{year:1945, persons:["rosa","otto"], coords:[[50.03,19.17],[46.48,30.72]], style:{color:'purple'}}
+];
 
 // NODES
-var nodes = [ /* volledig zoals eerder */ ];
+var nodes = [
+{year:1942, coords:[52.37,4.89], text:"Amsterdam"},
+{year:1943, coords:[52.91,6.58], text:"Westerbork"},
+{year:1944, coords:[50.03,19.17], text:"Auschwitz"},
+{year:1945, coords:[51.19,5.98], text:"Roermond"}
+];
 
 // RENDER
 function render(year){
@@ -152,36 +128,26 @@ L.polyline(route.coords, route.style).addTo(layers[p]);
 
 nodes.forEach(function(n){
 if(n.year <= year){
-L.circleMarker(n.coords,{
-radius:6,color:'black',fillColor:'yellow',fillOpacity:0.9
-})
+L.circleMarker(n.coords,{radius:6,color:'black',fillColor:'yellow',fillOpacity:0.9})
 .bindPopup(n.text)
 .addTo(nodeLayer);
 }
 });
 }
 
-// SLIDER
+// EVENTS
 document.getElementById("yearSlider").addEventListener("input", function(){
 const year = parseInt(this.value);
 document.getElementById("yearLabel").innerText = year;
 render(year);
 });
 
-// CHECKBOXES
-["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
-document.getElementById(id).addEventListener("change", function(){
-render(parseInt(document.getElementById("yearSlider").value));
-});
-});
-
-// CLICK OP RIJ
 document.querySelectorAll(".person").forEach(function(el){
 el.addEventListener("click", function(e){
-if(e.target.tagName.toLowerCase() === "input") return;
-const id = this.getAttribute("data-person");
-const checkbox = document.getElementById(id);
-checkbox.checked = !checkbox.checked;
+if(e.target.tagName === "INPUT") return;
+const id = this.dataset.person;
+const cb = document.getElementById(id);
+cb.checked = !cb.checked;
 render(parseInt(document.getElementById("yearSlider").value));
 });
 });
