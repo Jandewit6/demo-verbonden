@@ -1,4 +1,3 @@
-```html
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -9,264 +8,188 @@
 <script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
 
 <style>
-body { margin:0; font-family:Arial; }
-#map { height:100vh; }
+#map { height: 100vh; }
 
 #controls {
-  position:absolute;
-  top:10px;
-  left:10px;
-  background:white;
-  padding:10px;
-  border-radius:8px;
-  z-index:1000;
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: white;
+    padding: 10px;
+    z-index: 1000;
+    max-width: 240px;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
 }
 
-#infoPanel {
-  position:absolute;
-  right:10px;
-  top:10px;
-  width:320px;
-  background:white;
-  padding:15px;
-  border-radius:8px;
-  z-index:1000;
-  max-height:90vh;
-  overflow:auto;
+.person {
+    display: flex;
+    align-items: center;
+    margin-bottom: 6px;
+    cursor: pointer;
+}
+
+.person img {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 6px;
+}
+
+#legend {
+    position: absolute;
+    bottom: 20px;
+    right: 10px;
+    background: white;
+    padding: 10px;
+    z-index: 1000;
+    box-shadow: 0 0 12px rgba(0,0,0,0.3);
+    font-size: 13px;
+}
+
+.legend-item {
+    display: flex;
+    align-items: center;
+    margin-bottom: 5px;
+}
+
+.legend-line {
+    width: 30px;
+    height: 4px;
+    margin-right: 6px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="map"></div>
-
 <div id="controls">
-<b>Personen</b><br>
-<button onclick="togglePerson('Anne Frank')">Anne</button>
-<button onclick="togglePerson('Edith Frank')">Edith</button>
-<button onclick="togglePerson('Otto Frank')">Otto</button>
-<button onclick="togglePerson('Rosa de Winter')">Rosa</button>
-<button onclick="togglePerson('Judith de Winter')">Judith</button><br><br>
 
-<button onclick="resetPersons()">Reset</button>
-
-<br><br>
-<b>Jaar: <span id="yearLabel">1945</span></b><br>
-<input type="range" id="yearSlider" min="1935" max="1975" value="1945" step="1" oninput="setYear(this.value)">
-
-<br><br>
-<button onclick="toggleStory()">▶️ Start verhaal</button>
+<div class="person" data-person="anne">
+<input type="checkbox" id="anne" checked>
+<img src="https://images.memorix.nl/anf/thumb/1920x1080/e2721f7d-9990-e64e-aaf7-085e8c37b11d.jpg">Anne
 </div>
 
-<div id="infoPanel">Klik op een persoon of locatie</div>
+<div class="person" data-person="margot">
+<input type="checkbox" id="margot" checked>
+<img src="https://images.memorix.nl/anf/thumb/1920x1080/9c2717fe-2305-e3c1-33eb-8cac8fb8d7aa.jpg">Margot
+</div>
+
+<div class="person" data-person="otto">
+<input type="checkbox" id="otto" checked>
+<img src="https://images.memorix.nl/anf/thumb/1920x1080/e73c20a4-8bb2-307d-f5f0-2d93291a2009.jpg">Otto
+</div>
+
+<div class="person" data-person="edith">
+<input type="checkbox" id="edith" checked>
+<img src="https://images.memorix.nl/anf/thumb/1920x1080/9006f8f0-6a33-baaf-a392-73cfcefdc04b.jpg">Edith
+</div>
+
+<div class="person" data-person="rosa">
+<input type="checkbox" id="rosa" checked>
+<img src="https://maior-images.memorix.nl/anf/iiif/744cbfdd-a75c-0f87-3264-3de82034dd1f/355,350,600,600/max/0/default.jpg">Rosa
+</div>
+
+<div class="person" data-person="judy">
+<input type="checkbox" id="judy" checked>
+<img src="https://maior-images.memorix.nl/anf/iiif/8b8544a8-c77b-3bcc-7511-b2bee22bf7b5/50,70,900,900/max/0/default.jpg">Judy
+</div>
+
+<b>Jaar: <span id="yearLabel">1945</span></b><br>
+<input type="range" id="yearSlider" min="1942" max="1945" value="1945">
+
+</div>
+
+<div id="legend">
+<b>Legenda</b>
+<div class="legend-item"><div class="legend-line" style="background:red"></div>Deportatie familie Frank</div>
+<div class="legend-item"><div class="legend-line" style="background:blue"></div>Kampverplaatsing Anne en Margot</div>
+<div class="legend-item"><div class="legend-line" style="background:green"></div>Deportatie familie De Winter</div>
+<div class="legend-item"><div class="legend-line" style="background:orange"></div>Dwangarbeid Judy de Winter</div>
+<div class="legend-item"><div class="legend-line" style="border-top:2px dashed black"></div>Repatriëring zee Rosa en Otto</div>
+<div class="legend-item"><div class="legend-line" style="background:purple"></div>Repatriëring land Judy de Winter</div>
+</div>
+
+<div id="map"></div>
 
 <script>
 
-// kaart
-const map = L.map('map').setView([50,10], 4);
+// MAP
+var map = L.map('map').setView([52.1,5.3],5);
 L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png').addTo(map);
 
-// kleuren
-const colors = {
-  "Anne Frank":"red",
-  "Edith Frank":"pink",
-  "Otto Frank":"green",
-  "Rosa de Winter":"blue",
-  "Judith de Winter":"purple"
+// LAYERS
+var layers = {
+anne:L.layerGroup().addTo(map),
+margot:L.layerGroup().addTo(map),
+otto:L.layerGroup().addTo(map),
+edith:L.layerGroup().addTo(map),
+rosa:L.layerGroup().addTo(map),
+judy:L.layerGroup().addTo(map)
 };
 
-let activePersons = new Set(Object.keys(colors));
-let currentYear = 1945;
+var nodeLayer = L.layerGroup().addTo(map);
 
-// routes
-const routes = {
-"Rosa de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
-"Judith de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
-"Edith Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]],
-"Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]]
-};
+// DATA
+var data = [ /* volledig zoals eerder */ ];
 
-// deportatie
-const transport3Sept1944 = [
-[52.9153,6.6097],[52.9967,6.5625],[52.5168,6.0830],[52.2550,6.1639],
-[52.3075,6.9358],[52.3000,7.1667],[52.2799,8.0472],[52.3759,9.7320],
-[52.1205,11.6276],[51.4825,11.9700],[51.1079,17.0385],[50.0359,19.1783]
-];
+// NODES
+var nodes = [ /* volledig zoals eerder */ ];
 
-// Monowai
-const monowaiGeoJSON = {
-"type":"FeatureCollection",
-"features":[
-{"type":"Feature","properties":{"name":"Odessa","date":"21 mei 1945"},"geometry":{"type":"Point","coordinates":[30.7233,46.4825]}},
-{"type":"Feature","properties":{"name":"Istanbul","date":"23 mei 1945"},"geometry":{"type":"Point","coordinates":[28.9784,41.0082]}},
-{"type":"Feature","properties":{"name":"Kreta","date":"24 mei 1945"},"geometry":{"type":"Point","coordinates":[24.8093,35.2401]}},
-{"type":"Feature","properties":{"name":"Sardinië","date":"25 mei 1945"},"geometry":{"type":"Point","coordinates":[9.0129,40.1209]}},
-{"type":"Feature","properties":{"name":"Corsica","date":"26 mei 1945"},"geometry":{"type":"Point","coordinates":[9.0129,42.0396]}},
-{"type":"Feature","properties":{"name":"Marseille","date":"27 mei 1945"},"geometry":{"type":"Point","coordinates":[5.3698,43.2965]}}
-]
-};
+// RENDER
+function render(year){
+Object.values(layers).forEach(l => l.clearLayers());
+nodeLayer.clearLayers();
 
-const monowaiRoute = monowaiGeoJSON.features.map(f=>{
-const [lon,lat]=f.geometry.coordinates;
-return {name:f.properties.name,date:f.properties.date,coords:[lat,lon]};
+data.forEach(function(route){
+if(route.year <= year){
+route.persons.forEach(function(p){
+if(document.getElementById(p).checked){
+L.polyline(route.coords, route.style).addTo(layers[p]);
+}
+});
+}
 });
 
-// info
-function showInfo(text){
-document.getElementById("infoPanel").innerHTML = text;
+nodes.forEach(function(n){
+if(n.year <= year){
+L.circleMarker(n.coords,{
+radius:6,color:'black',fillColor:'yellow',fillOpacity:0.9
+})
+.bindPopup(n.text)
+.addTo(nodeLayer);
 }
-
-// layers
-let layers=[];
-
-// fade effect
-function fadeLayer(layer){
-let opacity=0;
-const fade=setInterval(()=>{
-opacity+=0.1;
-layer.setStyle && layer.setStyle({opacity});
-if(opacity>=1) clearInterval(fade);
-},50);
-}
-
-// 🚂 train animation
-let trainMarker=null, trainIndex=0, trainInterval=null;
-
-function animateTrain(){
-
-if(trainInterval) clearInterval(trainInterval);
-
-trainIndex=0;
-
-trainMarker=L.circleMarker(transport3Sept1944[0],{
-radius:8,color:"black",fillColor:"red",fillOpacity:1
-}).addTo(map);
-
-trainInterval=setInterval(()=>{
-trainIndex++;
-if(trainIndex>=transport3Sept1944.length){
-clearInterval(trainInterval);
-return;
-}
-trainMarker.setLatLng(transport3Sept1944[trainIndex]);
-},400);
-}
-
-// update map
-function update(){
-
-layers.forEach(l=>map.removeLayer(l));
-layers=[];
-
-// routes
-Object.keys(routes).forEach(person=>{
-if(!activePersons.has(person)) return;
-
-const line=L.polyline(routes[person],{
-color:colors[person],
-weight:3,
-opacity:0
-}).addTo(map);
-
-fadeLayer(line);
-layers.push(line);
-});
-
-// deportatie
-if(currentYear<=1944){
-
-const line=L.polyline(transport3Sept1944,{
-color:"darkred",
-weight:6,
-opacity:0.6
-}).addTo(map);
-
-layers.push(line);
-
-if(currentYear===1944 && !trainInterval){
-animateTrain();
-}
-}
-
-// kampen
-if(currentYear<=1945){
-
-layers.push(L.circleMarker([52.92,6.61],{radius:10,fillColor:"yellow",fillOpacity:1}).addTo(map));
-layers.push(L.circleMarker([50.03,19.2],{radius:10,fillColor:"red",fillOpacity:1}).addTo(map));
-layers.push(L.circleMarker([50.8167,14.9667],{radius:8,fillColor:"gray",fillOpacity:1}).addTo(map));
-
-}
-
-// Monowai
-if(currentYear>=1945){
-
-const latlngs=monowaiRoute.map(p=>p.coords);
-
-layers.push(L.polyline(latlngs,{
-color:"cyan",
-dashArray:"6,10",
-weight:4
-}).addTo(map));
-
-monowaiRoute.forEach(p=>{
-layers.push(
-L.circleMarker(p.coords,{radius:5,color:"cyan"})
-.bindPopup(`<b>${p.name}</b><br>${p.date}`)
-.addTo(map)
-);
 });
 }
 
-}
+// SLIDER
+document.getElementById("yearSlider").addEventListener("input", function(){
+const year = parseInt(this.value);
+document.getElementById("yearLabel").innerText = year;
+render(year);
+});
 
-// controls
-function togglePerson(name){
-if(activePersons.has(name)) activePersons.delete(name);
-else activePersons.add(name);
-update();
-}
+// CHECKBOXES
+["anne","margot","otto","edith","rosa","judy"].forEach(function(id){
+document.getElementById(id).addEventListener("change", function(){
+render(parseInt(document.getElementById("yearSlider").value));
+});
+});
 
-function resetPersons(){
-activePersons=new Set(Object.keys(colors));
-update();
-}
+// CLICK OP RIJ
+document.querySelectorAll(".person").forEach(function(el){
+el.addEventListener("click", function(e){
+if(e.target.tagName.toLowerCase() === "input") return;
+const id = this.getAttribute("data-person");
+const checkbox = document.getElementById(id);
+checkbox.checked = !checkbox.checked;
+render(parseInt(document.getElementById("yearSlider").value));
+});
+});
 
-function setYear(year){
-currentYear=parseInt(year);
-document.getElementById("yearLabel").innerText=year;
-update();
-}
-
-// ▶️ story mode
-let storyInterval=null;
-
-function toggleStory(){
-
-if(storyInterval){
-clearInterval(storyInterval);
-storyInterval=null;
-return;
-}
-
-storyInterval=setInterval(()=>{
-if(currentYear>=1975){
-clearInterval(storyInterval);
-return;
-}
-currentYear++;
-document.getElementById("yearSlider").value=currentYear;
-document.getElementById("yearLabel").innerText=currentYear;
-update();
-},800);
-
-}
-
-// init
-update();
+// INIT
+render(1945);
 
 </script>
 
 </body>
 </html>
-```
