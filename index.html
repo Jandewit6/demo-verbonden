@@ -1,3 +1,4 @@
+```html
 <!DOCTYPE html>
 <html lang="nl">
 <head>
@@ -49,6 +50,13 @@ body { margin:0; font-family:Arial; }
 <button onclick="togglePerson('Judith de Winter')">Judith</button><br><br>
 
 <button onclick="resetPersons()">Reset</button>
+
+<br><br>
+<b>Jaar: <span id="yearLabel">1945</span></b><br>
+<input type="range" id="yearSlider" min="1935" max="1975" value="1945" step="1" oninput="setYear(this.value)">
+
+<br><br>
+<button onclick="toggleStory()">▶️ Start verhaal</button>
 </div>
 
 <div id="infoPanel">Klik op een persoon of locatie</div>
@@ -69,8 +77,9 @@ const colors = {
 };
 
 let activePersons = new Set(Object.keys(colors));
+let currentYear = 1945;
 
-// basisroutes
+// routes
 const routes = {
 "Rosa de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
 "Judith de Winter":[[52.14,6.2],[52.92,6.61],[50.03,19.2]],
@@ -78,23 +87,14 @@ const routes = {
 "Otto Frank":[[52.37,4.9],[52.92,6.61],[50.03,19.2]]
 };
 
-// 🚂 transport 3 sept 1944
+// deportatie
 const transport3Sept1944 = [
-[52.9153,6.6097],
-[52.9967,6.5625],
-[52.5168,6.0830],
-[52.2550,6.1639],
-[52.3075,6.9358],
-[52.3000,7.1667],
-[52.2799,8.0472],
-[52.3759,9.7320],
-[52.1205,11.6276],
-[51.4825,11.9700],
-[51.1079,17.0385],
-[50.0359,19.1783]
+[52.9153,6.6097],[52.9967,6.5625],[52.5168,6.0830],[52.2550,6.1639],
+[52.3075,6.9358],[52.3000,7.1667],[52.2799,8.0472],[52.3759,9.7320],
+[52.1205,11.6276],[51.4825,11.9700],[51.1079,17.0385],[50.0359,19.1783]
 ];
 
-// 🚢 Monowai
+// Monowai
 const monowaiGeoJSON = {
 "type":"FeatureCollection",
 "features":[
@@ -113,79 +113,47 @@ return {name:f.properties.name,date:f.properties.date,coords:[lat,lon]};
 });
 
 // info
-const infoData = {
-
-"Rosa de Winter":`
-<h3>Rosa de Winter</h3>
-Overleefde Auschwitz.
-
-In het kamp maakte zij deel uit van netwerken van onderlinge zorg.
-Zij was aanwezig bij het overlijden van Edith Frank.
-
-Na de bevrijding keerde zij terug via de Monowai.
-`,
-
-"Edith Frank":`
-<h3>Edith Frank</h3>
-Moeder van Anne Frank.
-
-In Auschwitz ernstig verzwakt door honger en ziekte.
-Werd verzorgd door medegevangenen, waaronder Rosa de Winter.
-
-Overleed in januari 1945.
-`,
-
-"Otto Frank":`
-<h3>Otto Frank</h3>
-Overleefde Auschwitz en keerde via Odessa en de Monowai terug naar West-Europa.
-`,
-
-"Judith de Winter":`
-<h3>Judith de Winter</h3>
-Dochter van Rosa. Werd samen met haar moeder gedeporteerd.
-`,
-
-"deportatie":`
-<h3>Deportatietrein</h3>
-Transporten vonden plaats in afgesloten goederenwagons.
-
-Reizen duurden meerdere dagen zonder voldoende voedsel, water of sanitaire voorzieningen.
-De trein volgde het bestaande Europese spoornetwerk en vormde een essentieel onderdeel
-van het deportatiesysteem.
-`,
-
-"kratzau":`
-<h3>Werkkamp Kratzau</h3>
-Kratzau (nu Chrastava) was een nevenkamp binnen het concentratiekampnetwerk.
-
-Gevangenen werden ingezet voor dwangarbeid onder zware omstandigheden,
-met weinig voedsel en slechte huisvesting.
-
-Zoals in veel werkkampen draaide het bestaan om overleven binnen een systeem
-van uitputting en controle.
-`,
-
-"monowai":`
-<h3>Repatriëring – schip Monowai</h3>
-Na de bevrijding werden overlevenden vanuit Oost-Europa per schip gerepatrieerd.
-
-De Monowai vertrok vanuit Odessa en voer via de Bosporus en de Middellandse Zee
-naar Marseille.
-
-De reis markeerde een overgang: van kampgevangenschap naar terugkeer,
-maar ook naar onzekerheid over familie, thuis en toekomst.
-`,
-
-"westerbork":"Doorgangskamp in Nederland.",
-"auschwitz":"Bestemming van deportaties."
-};
-
-function showInfo(key){
-document.getElementById("infoPanel").innerHTML = infoData[key] || key;
+function showInfo(text){
+document.getElementById("infoPanel").innerHTML = text;
 }
 
+// layers
 let layers=[];
 
+// fade effect
+function fadeLayer(layer){
+let opacity=0;
+const fade=setInterval(()=>{
+opacity+=0.1;
+layer.setStyle && layer.setStyle({opacity});
+if(opacity>=1) clearInterval(fade);
+},50);
+}
+
+// 🚂 train animation
+let trainMarker=null, trainIndex=0, trainInterval=null;
+
+function animateTrain(){
+
+if(trainInterval) clearInterval(trainInterval);
+
+trainIndex=0;
+
+trainMarker=L.circleMarker(transport3Sept1944[0],{
+radius:8,color:"black",fillColor:"red",fillOpacity:1
+}).addTo(map);
+
+trainInterval=setInterval(()=>{
+trainIndex++;
+if(trainIndex>=transport3Sept1944.length){
+clearInterval(trainInterval);
+return;
+}
+trainMarker.setLatLng(transport3Sept1944[trainIndex]);
+},400);
+}
+
+// update map
 function update(){
 
 layers.forEach(l=>map.removeLayer(l));
@@ -195,59 +163,51 @@ layers=[];
 Object.keys(routes).forEach(person=>{
 if(!activePersons.has(person)) return;
 
-layers.push(
-L.polyline(routes[person],{
+const line=L.polyline(routes[person],{
 color:colors[person],
-weight:3
-}).on("click",()=>showInfo(person)).addTo(map)
-);
+weight:3,
+opacity:0
+}).addTo(map);
+
+fadeLayer(line);
+layers.push(line);
 });
 
 // deportatie
-layers.push(
-L.polyline(transport3Sept1944,{
+if(currentYear<=1944){
+
+const line=L.polyline(transport3Sept1944,{
 color:"darkred",
-weight:6
-})
-.on("click",()=>showInfo("deportatie"))
-.addTo(map)
-);
+weight:6,
+opacity:0.6
+}).addTo(map);
 
-// Westerbork
-layers.push(
-L.circleMarker([52.92,6.61],{radius:10,fillColor:"yellow",fillOpacity:1})
-.on("click",()=>showInfo("westerbork"))
-.addTo(map)
-);
+layers.push(line);
 
-// Auschwitz
-layers.push(
-L.circleMarker([50.03,19.2],{radius:10,fillColor:"red",fillOpacity:1})
-.on("click",()=>showInfo("auschwitz"))
-.addTo(map)
-);
+if(currentYear===1944 && !trainInterval){
+animateTrain();
+}
+}
 
-// Kratzau
-layers.push(
-L.circleMarker([50.8167,14.9667],{radius:8,fillColor:"gray",fillOpacity:1})
-.on("click",()=>showInfo("kratzau"))
-.addTo(map)
-);
+// kampen
+if(currentYear<=1945){
+
+layers.push(L.circleMarker([52.92,6.61],{radius:10,fillColor:"yellow",fillOpacity:1}).addTo(map));
+layers.push(L.circleMarker([50.03,19.2],{radius:10,fillColor:"red",fillOpacity:1}).addTo(map));
+layers.push(L.circleMarker([50.8167,14.9667],{radius:8,fillColor:"gray",fillOpacity:1}).addTo(map));
+
+}
 
 // Monowai
-if(activePersons.has("Otto Frank") || activePersons.has("Rosa de Winter")){
+if(currentYear>=1945){
 
-const latlngs = monowaiRoute.map(p=>p.coords);
+const latlngs=monowaiRoute.map(p=>p.coords);
 
-layers.push(
-L.polyline(latlngs,{
+layers.push(L.polyline(latlngs,{
 color:"cyan",
 dashArray:"6,10",
 weight:4
-})
-.on("click",()=>showInfo("monowai"))
-.addTo(map)
-);
+}).addTo(map));
 
 monowaiRoute.forEach(p=>{
 layers.push(
@@ -260,7 +220,7 @@ L.circleMarker(p.coords,{radius:5,color:"cyan"})
 
 }
 
-// toggles
+// controls
 function togglePerson(name){
 if(activePersons.has(name)) activePersons.delete(name);
 else activePersons.add(name);
@@ -272,6 +232,36 @@ activePersons=new Set(Object.keys(colors));
 update();
 }
 
+function setYear(year){
+currentYear=parseInt(year);
+document.getElementById("yearLabel").innerText=year;
+update();
+}
+
+// ▶️ story mode
+let storyInterval=null;
+
+function toggleStory(){
+
+if(storyInterval){
+clearInterval(storyInterval);
+storyInterval=null;
+return;
+}
+
+storyInterval=setInterval(()=>{
+if(currentYear>=1975){
+clearInterval(storyInterval);
+return;
+}
+currentYear++;
+document.getElementById("yearSlider").value=currentYear;
+document.getElementById("yearLabel").innerText=currentYear;
+update();
+},800);
+
+}
+
 // init
 update();
 
@@ -279,3 +269,4 @@ update();
 
 </body>
 </html>
+```
